@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="booking-bg-wrapper">
+    <div class="booking-bg-image"></div>
+    <section class="section-padding" style="margin-top: 0; position: relative; z-index: 1;">
+        <div class="grid" style="grid-template-columns: 2fr 1fr; align-items: start;">
+            
+            <!-- STEP-BY-STEP FORM -->
+            <div class="glass card" style="padding: 3rem;">
+                <div id="step1" class="step-container active">
+                    <h2 style="color: var(--primary); margin-bottom: 2rem;">1. Event Details</h2>
+                    <div class="form-group">
+                        <label>Event Date</label>
+                        <input type="date" id="event_date" class="form-control" required>
+                        <p id="availability_msg" style="margin-top: 0.5rem; font-size: 0.9rem;"></p>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Type</label>
+                        <select id="event_type" class="form-control">
+                            {% for event in event_types %}
+                                <option value="{{ event.id }}" data-price="{{ event.base_price }}">{{ event.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Number of Guests (Min 10)</label>
+                        <input type="number" id="guests" class="form-control" value="50" min="10">
+                        <small id="guest_warning" style="color: #ff4444; display: none;">Minimum 10 guests required for ordering.</small>
+                    </div>
+                    <button class="btn btn-primary" onclick="nextStep(2)" id="btnStep1" disabled>Continue to Packages</button>
+                </div>
+
+                <div id="step2" class="step-container">
+                    <h2 style="color: var(--primary); margin-bottom: 2rem;">2. Select a Package</h2>
+                    <p style="color: var(--text-dim); margin-bottom: 2rem;">Packages pre-populate your menu. You can still customize later.</p>
+                    <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                        {% for pkg in packages %}
+                            <div class="glass card pkg-card" style="cursor: pointer; padding: 1.5rem; text-align: center;" onclick="selectPackage('{{ pkg.id }}', '{{ pkg.name }}', {{ pkg.price_per_guest }})">
+                                <h4 style="color: var(--primary);">{{ pkg.name }}</h4>
+                                <p>₹{{ pkg.price_per_guest }}/p</p>
+                                <small>{{ pkg.items_summary }}</small>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="nextStep(1)">Back</button>
+                        <button class="btn btn-primary" onclick="nextStep(3)">Customize Menu</button>
+                        <button class="btn btn-primary" style="background: var(--accent);" onclick="instantQuote()">Instant Quotation</button>
+                    </div>
+                </div>
+
+                <div id="step3" class="step-container">
+                    <h2 style="color: var(--primary); margin-bottom: 2rem;">3. Customize Menu</h2>
+                    <div id="menu-categories">
+                        {% set categories = ['Starter', 'Main Course', 'Dessert', 'Drink'] %}
+                        {% for cat in categories %}
+                            <h4 style="margin: 1.5rem 0 1rem; color: var(--primary);">{{ cat }}</h4>
+                            <div style="display: flex; flex-wrap: wrap; gap: 1rem;">
+                                {% for item in menu_items if item.category == cat %}
+                                    <div class="glass card item-card" style="padding: 0.5rem 1rem; cursor: pointer; display: flex; align-items: center; gap: 0.5rem;" onclick="toggleItem('{{ item.id }}', {{ item.price }}, this)">
+                                        <input type="checkbox" id="item_{{ item.id }}" style="display: none;">
+                                        <span>{{ item.name }}</span>
+                                        <span style="color: var(--text-dim); font-size: 0.8rem;">(₹{{ item.price }})</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="nextStep(2)">Back</button>
+                        <button class="btn btn-primary" onclick="nextStep(4)">Service Type</button>
+                    </div>
+                </div>
+
+                <div id="step4" class="step-container">
+                    <h2 style="color: var(--primary); margin-bottom: 2rem;">4. Service & Instructions</h2>
+                    <div class="form-group">
+                        <label>Service Type</label>
+                        <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                            <div class="glass card service-card active" onclick="selectService('Normal', this)" style="cursor: pointer; padding: 1rem; text-align: center;">
+                                <h5>Normal Delivery</h5>
+                            </div>
+                            <div class="glass card service-card" onclick="selectService('Buffet Setup', this)" style="cursor: pointer; padding: 1rem; text-align: center;">
+                                <h5>Buffet Setup (+15%)</h5>
+                            </div>
+                            <div class="glass card service-card" onclick="selectService('Live Cooking', this)" style="cursor: pointer; padding: 1rem; text-align: center;">
+                                <h5>Live Cooking (+25%)</h5>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Special Instructions</label>
+                        <textarea id="notes" class="form-control" rows="3" placeholder="Any dietary preferences or setup notes..."></textarea>
+                    </div>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                        <button class="btn btn-outline" onclick="nextStep(3)">Back</button>
+                        <button class="btn btn-primary" onclick="showPaymentModal()" style="background: var(--accent); color: white;">Confirm Booking & Pay</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- QUOTATION PANEL (STICKY) -->
+            <div class="glass card price-card" style="padding: 2rem;">
+                <h3 style="color: var(--primary); margin-bottom: 1.5rem; text-align: center;">Live Quotation</h3>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span>Base Price:</span>
+                    <span id="price_base">₹0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span>Total Food Cost:</span>
+                    <span id="price_food">₹0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                    <span>Service Type Fee:</span>
+                    <span id="price_service">₹0</span>
+                </div>
+                <hr style="border: 0.5px solid var(--glass-border); margin: 1rem 0;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--text-dim);">
+                    <span>Subtotal (× <span id="summary_guests">50</span> guests):</span>
+                    <span id="price_subtotal">₹0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; color: var(--text-dim);">
+                    <span>GST (18%):</span>
+                    <span id="price_gst">₹0</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 1.5rem; font-size: 1.5rem; font-weight: 700; color: var(--primary);">
+                    <span>Total:</span>
+                    <span id="price_total">₹0</span>
+                </div>
+                
+                <div id="quantity_suggestion" style="margin-top: 2rem; padding: 1rem; background: rgba(16, 185, 129, 0.1); border-radius: 10px; border-left: 4px solid var(--accent); font-size: 0.85rem; color: var(--text-main);">
+                    <i class="fas fa-magic" style="margin-right: 5px;"></i>
+                    <strong>Smart Suggestion:</strong>
+                    <p id="suggestion_text" style="margin-top: 5px;">Choose at least 2 starters for a standard experience.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+
+<!-- PREMIUM PAYMENT PROCESSOR OVERLAY -->
+<div id="paymentOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 9999; justify-content: center; align-items: center; backdrop-filter: blur(15px); color: white;">
+    <div style="text-align: center; width: 100%; max-width: 600px; padding: 2rem;">
+        
+        <!-- CONTACT & DELIVERY INFO -->
+        <h1 id="processor-title" style="font-size: 2.5rem; margin-bottom: 1.5rem; color: var(--primary);">Delivery Details</h1>
+        <p id="processor-msg" style="color: var(--text-dim); margin-bottom: 2.5rem; font-size: 1.1rem;">Please provide your contact and delivery information to complete the booking.</p>
+
+        <!-- STAGED CONTENT -->
+        <div id="staged-content">
+            <!-- Stage 1: Form -->
+            <div id="stage-form" style="text-align: left; background: rgba(255,255,255,0.05); padding: 2.5rem; border-radius: 20px; border: 1px solid var(--glass-border);">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--primary);">Mobile Number</label>
+                    <input type="tel" id="contact_phone" class="form-control" placeholder="Enter 10-digit mobile number" style="background: rgba(0,0,0,0.3); color: white; border-color: var(--glass-border);">
+                </div>
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--primary);">Full Delivery Address / Venue Name</label>
+                    <textarea id="delivery_address" class="form-control" rows="3" placeholder="Enter exact delivery address" style="background: rgba(0,0,0,0.3); color: white; border-color: var(--glass-border);"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label style="display: block; margin-bottom: 1rem; color: var(--primary);">Select Payment Method</label>
+                    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <label class="glass card payment-option" style="padding: 0.6rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0; font-size: 0.85rem;">
+                            <input type="radio" name="payment_method" value="UPI" checked>
+                            <span>UPI</span>
+                        </label>
+                        <label class="glass card payment-option" style="padding: 0.6rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0; font-size: 0.85rem;">
+                            <input type="radio" name="payment_method" value="Card">
+                            <span>Card</span>
+                        </label>
+                        <label class="glass card payment-option" style="padding: 0.6rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0; font-size: 0.85rem;">
+                            <input type="radio" name="payment_method" value="Net Banking">
+                            <span>Net Banking</span>
+                        </label>
+                        <label class="glass card payment-option" style="padding: 0.6rem; cursor: pointer; display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0; font-size: 0.85rem;">
+                            <input type="radio" name="payment_method" value="Cash">
+                            <span>Cash</span>
+                        </label>
+                    </div>
+                </div>
+                <button class="btn btn-primary" style="width: auto; padding: 0.8rem 2rem; background: var(--accent); font-size: 0.9rem;" onclick="confirmPayment()">Pay & Place Order</button>
+            </div>
+
+            <!-- Stage 2: Razorpay Simulation -->
+            <div id="stage-razorpay" style="display: none; text-align: center;">
+                <div style="width: 80px; height: 80px; margin: 0 auto 2rem;">
+                    <div class="processing-circle"></div>
+                </div>
+                <h2 style="color: var(--primary); margin-bottom: 1rem;">Razorpay Secure Checkout</h2>
+                <p>Simulating secure payment connection...</p>
+                <div class="loader-line"></div>
+            </div>
+
+            <!-- Stage 4: Processing Confirmation (Kept for visual feedback after clicking pay) -->
+            <div id="stage-finalizing" style="display: none;">
+                <h2 style="color: var(--primary); margin-bottom: 1rem;">Processing Booking...</h2>
+                <p>Generating your invoice and confirming details.</p>
+                <div class="loader-line"></div>
+            </div>
+        </div>
+
+        <button id="btn-cancel-payment" class="btn btn-outline" style="margin-top: 3rem; color: #ff4444; border-color: #ff4444;" onclick="cancelPayment()">Cancel Secure Session</button>
+    </div>
+</div>
+
+<style>
+    .processing-circle {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.05);
+        border-top: 4px solid var(--primary);
+        border-bottom: 4px solid var(--accent);
+        animation: spin-premium 1.5s linear infinite;
+        box-shadow: 0 0 50px rgba(207, 166, 22, 0.2);
+        position: relative;
+    }
+    
+    .processing-circle::after {
+        content: '';
+        position: absolute;
+        top: 20px; left: 20px; right: 20px; bottom: 20px;
+        border-radius: 50%;
+        border: 2px dashed var(--primary);
+        animation: pulse-ring 2s ease-out infinite;
+        opacity: 0.5;
+    }
+
+    @keyframes pulse-ring {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { opacity: 0.5; }
+        100% { transform: scale(1.2); opacity: 0; }
+    }
+    
+    @keyframes spin-premium {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .glass-card-simple {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 2rem;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+    }
+
+    .loader-line {
+        width: 100%;
+        height: 4px;
+        background: rgba(255,255,255,0.1);
+        margin-top: 1rem;
+        position: relative;
+        overflow: hidden;
+        border-radius: 2px;
+    }
+    .loader-line::after {
+        content: '';
+        position: absolute;
+        left: -50%;
+        width: 50%;
+        height: 100%;
+        background: var(--primary);
+        animation: line-load 1.5s infinite;
+    }
+    @keyframes line-load {
+        100% { left: 100%; }
+    }
+</style>
+
+<style>
+    .item-card.selected {
+        border-color: var(--primary);
+        background: rgba(207, 166, 22, 0.1);
+        color: var(--primary);
+    }
+    .service-card.active {
+        border-color: var(--accent);
+        background: rgba(16, 185, 129, 0.1);
+    }
+    .item-card { transition: var(--transition); border: 1px solid var(--glass-border); }
+    .pkg-card:hover { border-color: var(--primary); transform: scale(1.05); }
+    .pkg-card.active { border-color: var(--primary); background: rgba(207, 166, 22, 0.1); }
+</style>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/quotation.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<!-- HERO SECTION -->
+<section class="hero">
+    <h1 data-aos="fade-up">Elite Catering for Extraordinary Events.</h1>
+    <p data-aos="fade-up" data-aos-delay="200">
+        From intimate gatherings to grand celebrations, Planora delivers culinary excellence and flawless service
+        tailored to your vision.
+    </p>
+
+    <div data-aos="fade-up" data-aos-delay="400">
+        {% if current_user.is_authenticated and current_user.role != 'user' %}
+        <a href="{{ url_for('admin_dashboard' if current_user.role == 'admin' else 'employee_dashboard') }}"
+            class="btn btn-primary">
+            Go to Dashboard
+        </a>
+        {% else %}
+        <a href="{{ url_for('book_event') }}" class="btn btn-primary">Start Planning</a>
+        {% endif %}
+
+        <a href="#packages" class="btn btn-outline" style="margin-left: 1rem;">
+            View Packages
+        </a>
+    </div>
+</section>
+
+
+<!-- PACKAGES SECTION -->
+<section id="packages" class="section-padding">
+
+    <h2 class="section-title" data-aos="fade-up">
+        Our Signature Packages
+    </h2>
+
+    <div class="grid">
+
+        <!-- SILVER -->
+        <div class="glass card floating-card" data-aos="fade-up" data-aos-delay="100">
+            <h3 style="color: var(--primary); margin-bottom: 1rem;">Silver Package</h3>
+
+            <p style="font-size: 1.5rem; margin-bottom: 1rem;">
+                ₹800 <span style="font-size: 1rem; color: var(--text-dim);">/ guest</span>
+            </p>
+
+            <ul style="list-style: none; color: var(--text-dim); margin-bottom: 2rem;">
+                <li>✔ 2 Starters</li>
+                <li>✔ 2 Main Courses</li>
+                <li>✔ 1 Dessert</li>
+                <li>✔ Professional Service</li>
+            </ul>
+
+            {% if not current_user.is_authenticated or current_user.role == 'user' %}
+            <a href="{{ url_for('book_event') }}" class="btn btn-outline" style="width: 100%; text-align: center;">
+                Select Silver
+            </a>
+            {% endif %}
+        </div>
+
+
+        <!-- GOLD -->
+        <div class="glass card floating-card" data-aos="fade-up" data-aos-delay="200"
+            style="border: 1px solid var(--primary);">
+
+            <h3 style="color: var(--primary); margin-bottom: 1rem;">Gold Package</h3>
+
+            <p style="font-size: 1.5rem; margin-bottom: 1rem;">
+                ₹1200 <span style="font-size: 1rem; color: var(--text-dim);">/ guest</span>
+            </p>
+
+            <ul style="list-style: none; color: var(--text-dim); margin-bottom: 2rem;">
+                <li>✔ 3 Starters</li>
+                <li>✔ 3 Main Courses</li>
+                <li>✔ 2 Desserts + 1 Drink</li>
+                <li>✔ Premium Crockery</li>
+            </ul>
+
+            {% if not current_user.is_authenticated or current_user.role == 'user' %}
+            <a href="{{ url_for('book_event') }}" class="btn btn-primary" style="width: 100%; text-align: center;">
+                Select Gold
+            </a>
+            {% endif %}
+        </div>
+
+
+        <!-- PLATINUM -->
+        <div class="glass card floating-card" data-aos="fade-up" data-aos-delay="300">
+
+            <h3 style="color: var(--primary); margin-bottom: 1rem;">Platinum Package</h3>
+
+            <p style="font-size: 1.5rem; margin-bottom: 1rem;">
+                ₹1800 <span style="font-size: 1rem; color: var(--text-dim);">/ guest</span>
+            </p>
+
+            <ul style="list-style: none; color: var(--text-dim); margin-bottom: 2rem;">
+                <li>✔ Unlimited Starters</li>
+                <li>✔ Exotic Main Course</li>
+                <li>✔ 3 Desserts + Mocktails</li>
+                <li>✔ Live Cooking Stalls</li>
+            </ul>
+
+            {% if not current_user.is_authenticated or current_user.role == 'user' %}
+            <a href="{{ url_for('book_event') }}" class="btn btn-outline" style="width: 100%; text-align: center;">
+                Select Platinum
+            </a>
+            {% endif %}
+        </div>
+
+    </div>
+</section>
+
+
+<!-- GALLERY -->
+<section class="section-padding">
+    <div style="text-align: center; margin-bottom: 3rem;">
+        <h2 class="section-title" data-aos="fade-up">Culinary Excellence</h2>
+        <p data-aos="fade-up" data-aos-delay="100" style="color: var(--text-dim);">
+            A glimpse into our meticulously crafted dining experiences.
+        </p>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+
+        <div data-aos="fade-right">
+            <img src="{{ url_for('static', filename='images/buffet_spread.png') }}"
+                style="width:100%; border-radius:20px; height:350px; object-fit:cover; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        </div>
+
+        <div data-aos="fade-left">
+            <img src="{{ url_for('static', filename='images/premium_dish.png') }}"
+                style="width:100%; border-radius:20px; height:350px; object-fit:cover; box-shadow:0 10px 30px rgba(0,0,0,0.5);">
+        </div>
+
+    </div>
+</section>
+
+
+<!-- WHY PLANORA -->
+<section class="section-padding" style="background: rgba(255,255,255,0.02);">
+
+    <div style="text-align:center; max-width:800px; margin:auto;">
+
+        <h2 class="section-title" data-aos="fade-up">Why Planora?</h2>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+
+            <div data-aos="zoom-in">
+                <i class="fas fa-utensils" style="font-size:2.5rem; color:var(--primary);"></i>
+                <h4>Custom Menus</h4>
+                <p style="color:var(--text-dim);">Tailor every dish to your preference.</p>
+            </div>
+
+            <div data-aos="zoom-in" data-aos-delay="100">
+                <i class="fas fa-calculator" style="font-size:2.5rem; color:var(--primary);"></i>
+                <h4>Live Quotation</h4>
+                <p style="color:var(--text-dim);">Know your costs in real-time.</p>
+            </div>
+
+            <div data-aos="zoom-in" data-aos-delay="200">
+                <i class="fas fa-calendar-check" style="font-size:2.5rem; color:var(--primary);"></i>
+                <h4>Smart Availability</h4>
+                <p style="color:var(--text-dim);">Instant slot verification.</p>
+            </div>
+
+        </div>
+    </div>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="login-wrapper">
+
+    <!-- LEFT SIDE -->
+    <div class="left">
+        <div class="overlay">
+            <h1>Planora Catering</h1>
+            <p>Plan Events • Book Catering • Celebrate Better</p>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDE -->
+    <div class="right">
+
+        <div class="card">
+
+            <h2>Welcome Back 👋</h2>
+            <p>Login to continue</p>
+
+            <form method="POST">
+
+                <label>Email</label>
+                <input type="email" name="email" required>
+
+                <label>Password</label>
+                <input type="password" name="password" required>
+
+                <button type="submit">Login</button>
+
+            </form>
+
+            <p class="text">
+                New user?
+                <a href="{{ url_for('register') }}">Register</a>
+            </p>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    /* ================= LOGIN LAYOUT ================= */
+    .login-wrapper {
+        display: flex;
+        height: calc(100vh - 70px);
+        /* 🔥 FIX NAVBAR SPACE */
+    }
+
+    /* LEFT IMAGE */
+    .left {
+        flex: 1;
+        background: url('https://images.unsplash.com/photo-1555244162-803834f70033') center/cover;
+        position: relative;
+    }
+
+    .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 40px;
+    }
+
+    .overlay h1 {
+        font-size: 40px;
+    }
+
+    .overlay p {
+        color: #ddd;
+    }
+
+    /* RIGHT FORM */
+    .right {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #0f172a;
+    }
+
+    /* LOGIN CARD */
+    .card {
+        width: 350px;
+        padding: 30px;
+        border-radius: 15px;
+        background: rgba(255, 255, 255, 0.08);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    /* FORM */
+    label {
+        font-size: 13px;
+        color: #ccc;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0 15px;
+        border-radius: 8px;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f97316, #ef4444);
+        color: white;
+        cursor: pointer;
+    }
+
+    button:hover {
+        transform: scale(1.05);
+    }
+
+    /* TEXT */
+    .text {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 13px;
+    }
+
+    .text a {
+        color: #f97316;
+        text-decoration: none;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+        .login-wrapper {
+            flex-direction: column;
+        }
+
+        .left {
+            height: 40vh;
+        }
+    }
+</style>
+
+{% endblock %}

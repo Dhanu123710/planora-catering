@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section-padding" style="margin-top: 50px;">
+    <div class="glass card" style="padding: 2rem; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary);">Employee Dashboard</h1>
+        <p style="color: var(--text-dim);">View and manage your assigned catering events.</p>
+    </div>
+
+    <h2 style="margin-bottom: 2rem;">Assigned Tasks</h2>
+    {% if assignments %}
+        <div class="grid">
+            {% for assignment in assignments %}
+                {% set booking = assignment.booking %}
+                <div class="glass card">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                        <span class="status-badge status-{{ booking.status.lower() }}">{{ booking.status }}</span>
+                        <span style="color: var(--text-dim);">{{ booking.event_date.strftime('%d %b %Y') }}</span>
+                    </div>
+                    <h3 style="color: var(--primary); margin-bottom: 0.5rem;">{{ booking.event_type.name }}</h3>
+                    <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1rem;">
+                        <strong>Customer:</strong> {{ booking.user.name }}<br>
+                        <strong>Guests:</strong> {{ booking.guests }}<br>
+                        <strong>Service:</strong> {{ booking.service_type }}
+                    </p>
+                    
+                    <div style="border-top: 1px solid var(--glass-border); padding-top: 1rem; margin-bottom: 1.5rem;">
+                        <h5 style="color: var(--primary); margin-bottom: 0.5rem;">Menu Items:</h5>
+                        <ul style="font-size: 0.8rem; color: var(--text-dim); padding-left: 1.2rem;">
+                            {% for item in booking.items %}
+                                <li>{{ item.menu_item.name }} ({{ item.quantity }})</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    {% if not assignment.is_completed %}
+                        <button onclick="markAsCompleted('{{ assignment.id }}')" class="btn btn-primary" style="width: 100%; font-size: 0.8rem;">Mark as Completed</button>
+                    {% else %}
+                        <div style="text-align: center; background: rgba(0, 163, 108, 0.1); padding: 1rem; border-radius: 8px;">
+                            <p style="color: #00a36c; font-weight: 600; margin-bottom: 0.5rem;"><i class="fas fa-check-circle"></i> Task Completed</p>
+                            {% if assignment.is_paid %}
+                                <p style="color: var(--accent); font-size: 0.9rem; font-weight: 600; margin-bottom: 0.5rem;">Payment Released: ₹{{ assignment.payment_amount }}</p>
+                                <a href="{{ url_for('view_payment_receipt', asgn_id=assignment.id) }}" class="btn btn-outline" style="padding: 0.3rem 1rem; font-size: 0.75rem;">View Payment Receipt</a>
+                            {% else %}
+                                <p style="color: var(--text-dim); font-size: 0.8rem;">Payment Pending Admin Choice</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="glass card" style="padding: 4rem; text-align: center;">
+            <i class="fas fa-clipboard-list" style="font-size: 4rem; color: var(--text-dim); margin-bottom: 1rem;"></i>
+            <p>No tasks assigned to you currently.</p>
+        </div>
+    {% endif %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function markAsCompleted(assignmentId) {
+    if(!confirm("Are you sure you want to mark this task as completed?")) return;
+    
+    fetch(`/employee/complete-assignment/${assignmentId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            alert("Task marked as completed!");
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

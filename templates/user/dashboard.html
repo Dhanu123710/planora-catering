@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<div class="booking-bg-wrapper">
+    <div class="booking-bg-image"></div>
+    <section class="section-padding" style="margin-top: 0; position: relative; z-index: 1;">
+        <div class="glass card" style="padding: 2rem; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1 style="color: var(--primary);">Welcome, {{ current_user.name }}!</h1>
+                <p style="color: var(--text-dim);">Manage your event bookings and history here.</p>
+            </div>
+            <a href="{{ url_for('book_event') }}" class="btn btn-primary"><i class="fas fa-plus"></i> New Booking</a>
+        </div>
+
+        <!-- User Booking Calendar -->
+        <div class="glass card" style="padding: 2rem; margin-bottom: 3rem;">
+            <h3 style="margin-bottom: 1.5rem; color: var(--primary);"><i class="fas fa-calendar-check"></i> My Schedule</h3>
+            <div id="calendar" style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 15px;"></div>
+        </div>
+
+        <h2 style="margin-bottom: 2rem;">My Bookings</h2>
+        {% if bookings %}
+            <div class="grid">
+                {% for booking in bookings %}
+                    <div class="glass card">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 1rem;">
+                            <span class="status-badge status-{{ booking.status.lower() }}">{{ booking.status }}</span>
+                            <span style="color: var(--text-dim);">{{ booking.event_date.strftime('%d %b %Y') }}</span>
+                        </div>
+                        <h3 style="color: var(--primary); margin-bottom: 0.5rem;">{{ booking.event_type.name }}</h3>
+                        <p style="margin-bottom: 0.5rem;">{{ booking.guests }} Guests | {{ booking.service_type }}</p>
+                        <p style="margin-bottom: 1rem; color: var(--text-dim); font-size: 0.8rem;">Paid via: {{ booking.payment_method }}</p>
+                        
+                        {% if booking.status == 'Cancelled' and booking.refund_status == 'Initiated' %}
+                            <div class="glass" style="background: rgba(16, 185, 129, 0.1); border: 1px solid var(--accent); padding: 0.8rem; border-radius: 10px; margin-bottom: 1rem; font-size: 0.8rem; color: var(--accent);">
+                                <i class="fas fa-info-circle"></i> <strong>Refund Initiated:</strong> Refund will be credited within 5–7 working days.
+                            </div>
+                        {% endif %}
+                        
+                        <p style="font-size: 1.2rem; font-weight: 700; margin-bottom: 1.5rem;">₹{{ booking.total_price|round|int }}</p>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('view_invoice', booking_id=booking.id) }}" class="btn btn-outline" style="flex: 1; text-align: center; font-size: 0.8rem;">View Invoice</a>
+                            {% if booking.can_cancel %}
+                            <button onclick="cancelBooking({{ booking.id }})" class="btn btn-outline" style="flex: 1; color: #ff4444; border-color: #ff4444; text-align: center; font-size: 0.8rem;">Cancel Booking</button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="glass card" style="padding: 4rem; text-align: center;">
+                <i class="fas fa-calendar-times" style="font-size: 4rem; color: var(--text-dim); margin-bottom: 1rem;"></i>
+                <p>No bookings found. Start planning your first event!</p>
+                <a href="{{ url_for('book_event') }}" class="btn btn-primary" style="margin-top: 1.5rem;">Book Now</a>
+            </div>
+        {% endif %}
+    </section>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth'
+            },
+            events: '/api/calendar-events',
+            eventClick: function(info) {
+                if (info.event.url) {
+                    info.jsEvent.preventDefault();
+                    window.location.href = info.event.url;
+                }
+            }
+        });
+        calendar.render();
+    }
+});
+
+function cancelBooking(bookingId) {
+    if (confirm('Are you sure you want to cancel this booking? This action cannot be undone.')) {
+        fetch(`/api/cancel-booking/${bookingId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Booking cancelled successfully.');
+                location.reload();
+            } else {
+                alert(data.message || 'Error cancelling booking.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while cancelling the booking.');
+        });
+    }
+}
+</script>
+{% endblock %}

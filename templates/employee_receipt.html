@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section-padding" style="margin-top: 50px;">
+    <div style="max-width: 700px; margin: 0 auto;">
+        <div class="glass card" id="receipt-print" style="padding: 4rem; position: relative; overflow: hidden;">
+            <!-- Watermark -->
+            <div style="position: absolute; top: -50px; right: -50px; font-size: 10rem; color: rgba(207, 166, 22, 0.05); transform: rotate(-30deg); pointer-events: none; font-weight: 700;">PAYMENT</div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3rem;">
+                <div>
+                    <h1 style="color: var(--primary); margin-bottom: 0.5rem;">PAYMENT RECEIPT</h1>
+                    <p style="color: var(--text-dim);">Employee Disbursement #ER-{{ assignment.id }}</p>
+                </div>
+                <div style="text-align: right;">
+                    <img src="{{ url_for('static', filename='images/logo.jpg') }}" alt="Planora Logo" style="height: 50px; margin-bottom: 0.5rem;">
+                    <h4 style="color: var(--primary); margin: 0;">PLANORA CATERING</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-dim); margin: 0;">Payroll & Operations</p>
+                </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); padding: 1.5rem; border-radius: 12px; margin-bottom: 2.5rem; display: flex; justify-content: space-between;">
+                <div>
+                    <h5 style="color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.5rem; font-size: 0.75rem;">Paid To:</h5>
+                    <h3 style="color: var(--primary);">{{ assignment.employee.name }}</h3>
+                    <p style="color: var(--text-dim); font-size: 0.9rem;">Contact: {{ assignment.employee.contact }}</p>
+                </div>
+                <div style="text-align: right;">
+                    <h5 style="color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.5rem; font-size: 0.75rem;">Date of Payment:</h5>
+                    <p style="color: var(--primary); font-weight: 600;">{{ assignment.paid_at.strftime('%d %b, %Y') if assignment.paid_at else 'N/A' }}</p>
+                </div>
+            </div>
+
+            <h4 style="color: var(--primary); margin-bottom: 1rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem;">Assignment Details</h4>
+            <div style="display: flex; flex-direction: column; gap: 1rem; margin-bottom: 3rem;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-dim);">Booking ID:</span>
+                    <span>#{{ assignment.booking_id }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-dim);">Event Type:</span>
+                    <span>{{ assignment.booking.event_type.name }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-dim);">Event Date:</span>
+                    <span>{{ assignment.booking.event_date.strftime('%d %b, %Y') }}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: var(--text-dim);">Task Status:</span>
+                    <span style="color: #00a36c; font-weight: 600;">Completed</span>
+                </div>
+            </div>
+
+            <div style="border-top: 2px solid var(--primary); padding-top: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                <h2 style="color: var(--primary);">Total Paid</h2>
+                <h1 style="color: var(--accent);">₹{{ assignment.payment_amount|round|int }}</h1>
+            </div>
+
+            <div style="margin-top: 4rem; border-top: 1px dashed var(--glass-border); padding-top: 2rem; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <p style="font-size: 0.75rem; color: var(--text-dim);">Authorised By</p>
+                    <div style="font-family: 'Dancing Script', cursive; font-size: 1.5rem; color: var(--primary); margin-top: 0.5rem;">Admin Office</div>
+                </div>
+                <div style="text-align: right;">
+                    <p style="font-size: 0.8rem; color: var(--text-dim);">Receipt generated electronically.<br>No signature required.</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: center;">
+            <button onclick="window.print()" class="btn btn-primary"><i class="fas fa-print"></i> Print Receipt</button>
+            {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('employee_dashboard') }}" class="btn btn-outline">Back to Dashboard</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<style>
+    @font-face {
+        font-family: 'Dancing Script';
+        src: url('https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap');
+    }
+    @media print {
+        nav, footer, .btn, .btn-outline { display: none !important; }
+        body { background: white !important; color: black !important; }
+        .glass { border: none !important; background: white !important; box-shadow: none !important; }
+        .card { padding: 0 !important; }
+        #receipt-print { margin: 0; width: 100%; }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Flask/SQLAlchemy
+instance/
+.webassets-cache
+.flaskenv
+
+# Local Database
+planora.db
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

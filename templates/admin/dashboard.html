@@ -1,0 +1,452 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<section class="section-padding" style="margin-top: 50px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1 style="color: var(--primary);"><i class="fas fa-hammer"></i> Admin Panel</h1>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <a href="{{ url_for('manage_menu') }}" class="btn btn-outline admin-nav-link"><i class="fas fa-utensils"></i> Menu</a>
+            <a href="{{ url_for('manage_events') }}" class="btn btn-outline admin-nav-link"><i class="fas fa-calendar-alt"></i> Events</a>
+        </div>
+    </div>
+
+    <!-- Booking Calendar Section -->
+    <div class="glass card" style="padding: 2rem; margin-bottom: 3rem;">
+        <h3 style="margin-bottom: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="fas fa-calendar-alt"></i> Booking Schedule
+        </h3>
+        <div id="calendar" style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 15px;"></div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-bottom: 3rem; gap: 1.5rem;">
+        <div class="glass card" style="display: flex; align-items: center; gap: 1.5rem; border-color: #00a36c;">
+            <div style="background: rgba(0, 163, 108, 0.1); padding: 1rem; border-radius: 15px;">
+                <i class="fas fa-wallet" style="color: #00a36c; font-size: 2rem;"></i>
+            </div>
+            <div>
+                <p style="color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase;">Gross Revenue</p>
+                <h3 style="color: #00a36c; margin: 0;">₹{{ gross_revenue|round|int }}</h3>
+            </div>
+        </div>
+        <div class="glass card" style="display: flex; align-items: center; gap: 1.5rem; border-color: #ff4d4d;">
+            <div style="background: rgba(255, 77, 77, 0.1); padding: 1rem; border-radius: 15px;">
+                <i class="fas fa-hand-holding-usd" style="color: #ff4d4d; font-size: 2rem;"></i>
+            </div>
+            <div>
+                <p style="color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase;">Employee Payouts</p>
+                <h3 style="color: #ff4d4d; margin: 0;">₹{{ total_expenses|round|int }}</h3>
+            </div>
+        </div>
+        <div class="glass card" style="display: flex; align-items: center; gap: 1.5rem; border-color: var(--accent);">
+            <div style="background: rgba(16, 185, 129, 0.1); padding: 1rem; border-radius: 15px;">
+                <i class="fas fa-chart-line" style="color: var(--accent); font-size: 2rem;"></i>
+            </div>
+            <div>
+                <p style="color: var(--text-dim); font-size: 0.8rem; text-transform: uppercase;">Net Profit</p>
+                <h2 style="color: var(--accent); margin: 0;">₹{{ net_revenue|round|int }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid" style="grid-template-columns: 2fr 1fr; margin-bottom: 3rem; gap: 2rem;">
+        <div class="glass card" style="padding: 1.5rem;">
+            <h4 style="margin-bottom: 1rem; color: var(--primary);">Revenue Trend</h4>
+            <canvas id="revenueChart" style="width: 100%; height: 300px; max-height: 300px;"></canvas>
+        </div>
+        <div class="glass card" style="padding: 1.5rem;">
+            <h4 style="margin-bottom: 1rem; color: var(--primary);">Payout Breakdown</h4>
+            <canvas id="payoutsChart" style="width: 100%; height: 300px; max-height: 300px;"></canvas>
+        </div>
+    </div>
+
+    <!-- All Bookings Table -->
+    <div class="glass card" style="padding: 2rem; overflow-x: auto; margin-bottom: 3rem;">
+        <h3 style="margin-bottom: 1.5rem;">All Bookings & Assignments</h3>
+        <table style="width: 100%; border-collapse: collapse; min-width: 900px;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 1px solid var(--glass-border); color: var(--primary);">
+                    <th style="padding: 1rem;">ID</th>
+                    <th style="padding: 1rem;">Customer</th>
+                    <th style="padding: 1rem;">Event / Date</th>
+                    <th style="padding: 1rem;">Total Price</th>
+                    <th style="padding: 1rem;">Status</th>
+                    <th style="padding: 1rem;">Assignment</th>
+                    <th style="padding: 1rem;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 1rem;">#{{ booking.id }}</td>
+                    <td style="padding: 1rem;">
+                        <strong>{{ booking.user.name }}</strong><br>
+                        <small style="color: var(--text-dim);">{{ booking.user.email }}</small>
+                    </td>
+                    <td style="padding: 1rem;">
+                        {{ booking.event_type.name }}<br>
+                        <small style="color: var(--text-dim);">{{ booking.event_date.strftime('%d %b %Y') }}</small>
+                    </td>
+                    <td style="padding: 1rem; font-weight: 600;">₹{{ booking.total_price|round|int }}</td>
+                    <td style="padding: 1rem;">
+                        <span class="status-badge status-{{ booking.status.lower() }}">{{ booking.status }}</span>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <select onchange="assignEmployee('{{ booking.id }}', this.value)" class="form-control" style="padding: 0.4rem; font-size: 0.8rem; min-width: 150px;">
+                            <option value="">-- Assign --</option>
+                            {% for emp in employees %}
+                                <option value="{{ emp.id }}" {% if booking.assignments and booking.assignments[0].employee_id == emp.id %}selected{% endif %}>{{ emp.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td style="padding: 1rem;">
+                        <select onchange="updateStatus('{{ booking.id }}', this.value)" class="form-control" style="padding: 0.4rem; font-size: 0.8rem; background: rgba(207, 166, 22, 0.1); border-color: var(--primary);">
+                            <option value="Pending" {% if booking.status == 'Pending' %}selected{% endif %}>Pending</option>
+                            <option value="Confirmed" {% if booking.status == 'Confirmed' %}selected{% endif %}>Confirmed</option>
+                            <option value="Completed" {% if booking.status == 'Completed' %}selected{% endif %}>Completed</option>
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Employee Management Section -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 3rem;">
+        <div class="glass card" style="padding: 2rem;">
+            <h3 style="margin-bottom: 1.5rem;">Add New Employee</h3>
+            <form action="{{ url_for('admin_employees') }}" method="POST">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Full Name</label>
+                    <input type="text" name="name" class="form-control" placeholder="Employee Name" required>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Email (Username)</label>
+                    <input type="email" name="email" class="form-control" placeholder="email@planora.com" required>
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Contact Number</label>
+                    <input type="text" name="contact" class="form-control" placeholder="Phone Number">
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-size: 0.9rem;">Password</label>
+                    <input type="password" name="password" class="form-control" placeholder="Default: emp123">
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Create Employee Account</button>
+            </form>
+        </div>
+
+        <div class="glass card" style="padding: 2rem;">
+            <h3 style="margin-bottom: 1.5rem;">Registered Employees</h3>
+            <div style="max-height: 400px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--glass-border); color: var(--primary); font-size: 0.8rem;">
+                            <th style="padding: 0.5rem;">Employee</th>
+                            <th style="padding: 0.5rem;">Role</th>
+                            <th style="padding: 0.5rem;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in employees %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 0.8rem 0.5rem;">
+                                <strong>{{ emp.name }}</strong><br>
+                                <small style="color: var(--text-dim);">{{ emp.contact }}</small>
+                            </td>
+                            <td style="padding: 0.5rem;"><span class="status-badge status-confirmed" style="font-size: 0.7rem;">Active</span></td>
+                            <td style="padding: 0.5rem;">
+                                <form action="{{ url_for('delete_employee', emp_id=emp.id) }}" method="POST" onsubmit="return confirm('Delete this employee?')">
+                                    <button type="submit" style="background: none; border: none; color: #ff4d4d; cursor: pointer; font-size: 0.8rem;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Tasks & Payments -->
+    <div class="glass card" style="padding: 2rem;">
+        <h3 style="margin-bottom: 1.5rem;">Task Completion & Payments</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="text-align: left; border-bottom: 1px solid var(--glass-border); color: var(--primary);">
+                    <th style="padding: 1rem;">Booking</th>
+                    <th style="padding: 1rem;">Assigned To</th>
+                    <th style="padding: 1rem;">Task Status</th>
+                    <th style="padding: 1rem;">Payment</th>
+                    <th style="padding: 1rem;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for booking in bookings %}
+                    {% for asgn in booking.assignments %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 1rem;">#{{ booking.id }} - {{ booking.event_type.name }}</td>
+                        <td style="padding: 1rem;">{{ asgn.employee.name }}</td>
+                        <td style="padding: 1rem;">
+                            {% if asgn.is_completed %}
+                                <span class="status-badge status-completed">Completed</span>
+                            {% else %}
+                                <span class="status-badge status-pending">In Progress</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if asgn.is_paid %}
+                                <span style="color: var(--accent); font-weight: 600;">₹{{ asgn.payment_amount }} (Paid)</span>
+                            {% else %}
+                                <span style="color: var(--text-dim);">Unpaid</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem;">
+                            {% if asgn.is_completed and not asgn.is_paid %}
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <input type="number" id="pay_amt_{{ asgn.id }}" placeholder="Amt" class="form-control" style="width: 80px; padding: 0.3rem;">
+                                    <button onclick="payEmployee('{{ asgn.id }}')" class="btn btn-primary" style="padding: 0.3rem 0.8rem; font-size: 0.7rem;">Pay</button>
+                                </div>
+                            {% elif asgn.is_paid %}
+                                <a href="{{ url_for('view_payment_receipt', asgn_id=asgn.id) }}" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.7rem; color: var(--accent); border-color: var(--accent);">View Receipt</a>
+                            {% else %}
+                                <small style="color: var(--text-dim);">Waiting for completion</small>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Financial Ledger -->
+    <div class="glass card" id="financial-ledger" style="padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0;">Financial Ledger</h3>
+            <button onclick="window.print()" class="btn btn-outline" style="font-size: 0.8rem;"><i class="fas fa-print"></i> Print Ledger</button>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Column 1: Incomes -->
+            <div>
+                <h4 style="color: #00a36c; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">Incomes (User Payments)</h4>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="text-align: left; color: var(--text-dim); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <th style="padding: 0.5rem;">Date</th>
+                            <th style="padding: 0.5rem;">User</th>
+                            <th style="padding: 0.5rem; text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for b in paid_bookings %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 0.5rem;">{{ b.event_date.strftime('%d %b %Y') }}</td>
+                            <td style="padding: 0.5rem;">{{ b.user.name }}</td>
+                            <td style="padding: 0.5rem; text-align: right; color: #00a36c;">+₹{{ b.total_price|round|int }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Column 2: Expenses -->
+            <div>
+                <h4 style="color: #ff4d4d; border-bottom: 1px solid var(--glass-border); padding-bottom: 0.5rem; margin-bottom: 1rem;">Expenses (Employee Payouts)</h4>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                    <thead>
+                        <tr style="text-align: left; color: var(--text-dim); border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <th style="padding: 0.5rem;">Date</th>
+                            <th style="padding: 0.5rem;">Employee</th>
+                            <th style="padding: 0.5rem; text-align: right;">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in paid_assignments %}
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 0.5rem;">{{ a.paid_at.strftime('%d %b %Y') if a.paid_at else 'N/A' }}</td>
+                            <td style="padding: 0.5rem;">{{ a.employee.name }}</td>
+                            <td style="padding: 0.5rem; text-align: right; color: #ff4d4d;">-₹{{ a.payment_amount|round|int }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div style="margin-top: 2rem; border-top: 2px solid var(--primary); padding-top: 1rem; display: flex; justify-content: flex-end;">
+            <div style="text-align: right;">
+                <p style="color: var(--text-dim); margin-bottom: 0.3rem; text-transform: uppercase; font-size: 0.8rem;">Net Revenue Computed</p>
+                <h2 style="color: var(--accent); margin: 0;">₹{{ net_revenue|round|int }}</h2>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        #financial-ledger, #financial-ledger * {
+            visibility: visible;
+        }
+        #financial-ledger {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            background: white !important;
+            color: black !important;
+            box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
+        }
+        .btn { display: none !important; }
+        
+        /* Force color printing if possible, but fallback colors provided */
+        #financial-ledger h4 { border-bottom: 1px solid #ddd !important; }
+        #financial-ledger table tr { border-bottom: 1px solid #eee !important; }
+        * { -webkit-print-color-adjust: exact !important; }
+    }
+</style>
+
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    if (calendarEl) {
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek'
+            },
+            events: '/api/calendar-events',
+            eventClick: function(info) {
+                if (info.event.url) {
+                    info.jsEvent.preventDefault();
+                    window.location.href = info.event.url;
+                }
+            },
+            themeSystem: 'bootstrap5' // Not using bootstrap but keeps it clean
+        });
+        calendar.render();
+    }
+});
+
+function updateStatus(bookingId, status) {
+    fetch(`/admin/update-status/${bookingId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: status })
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            flashMessage("Status updated to " + status);
+            location.reload();
+        }
+    });
+}
+
+function assignEmployee(bookingId, employeeId) {
+    fetch(`/admin/assign-employee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_id: bookingId, employee_id: employeeId })
+    }).then(res => res.json()).then(data => {
+        if(data.success) flashMessage("Employee assigned successfully");
+    });
+}
+
+function payEmployee(assignmentId) {
+    const amount = document.getElementById(`pay_amt_${assignmentId}`).value;
+    if(!amount || amount <= 0) {
+        alert("Please enter a valid payment amount");
+        return;
+    }
+    
+    fetch(`/admin/pay-assignment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assignment_id: assignmentId, amount: amount })
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            flashMessage("Payment recorded successfully");
+            location.reload();
+        }
+    });
+}
+
+function flashMessage(msg) {
+    Swal.fire({
+        icon: 'success',
+        title: 'Success',
+        text: msg,
+        background: 'rgba(10, 10, 10, 0.9)',
+        color: '#fff',
+        confirmButtonColor: '#cfa616'
+    });
+}
+
+// Chart.js Configurations
+const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { labels: { color: '#a0a0a0', font: { family: 'Poppins' } } }
+        },
+        scales: {
+            x: { ticks: { color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#a0a0a0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        }
+    };
+
+    // Revenue Chart (Line)
+    const revCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_dates | tojson | safe }},
+            datasets: [{
+                label: 'Gross Revenue (₹)',
+                data: {{ chart_rev_data | tojson | safe }},
+                borderColor: '#00a36c',
+                backgroundColor: 'rgba(0, 163, 108, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: chartOptions
+    });
+
+    // Payouts Chart (Doughnut)
+    const payoutCtx = document.getElementById('payoutsChart').getContext('2d');
+    new Chart(payoutCtx, {
+        type: 'doughnut',
+        data: {
+            labels: {{ chart_emp_names | tojson | safe }},
+            datasets: [{
+                label: 'Employee Payouts (₹)',
+                data: {{ chart_emp_payouts | tojson | safe }},
+                backgroundColor: ['#ff4d4d', '#cfa616', '#10b981', '#3b82f6', '#9333ea'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#a0a0a0', font: { family: 'Poppins' } } }
+            }
+        }
+    });
+</script>
+{% endblock %}
