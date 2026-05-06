@@ -3,3 +3,4 @@ Flask-SQLAlchemy
 Flask-Login
 gunicorn
 typing-extensions
+flask-cors

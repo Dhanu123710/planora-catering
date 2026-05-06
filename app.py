@@ -2,6 +2,7 @@ import os
 import sys
 print("Starting Flask App...", file=sys.stderr)
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask_cors import CORS
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, EventType, MenuItem, Package, Booking, BookingItem, Employee, Assignment
 from datetime import datetime
@@ -11,6 +12,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'planora-secret-key-123'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///planora.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+CORS(app) # Enable CORS for all routes
 
 db.init_app(app)
 
