@@ -1,4 +1,6 @@
 import os
+import sys
+print("Starting Flask App...", file=sys.stderr)
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, EventType, MenuItem, Package, Booking, BookingItem, Employee, Assignment
@@ -17,8 +19,12 @@ login_manager.login_view = 'login'
 login_manager.init_app(app)
 
 # Create tables if they don't exist
-with app.app_context():
-    db.create_all()
+try:
+    with app.app_context():
+        db.create_all()
+    print("Database initialized successfully!", file=sys.stderr)
+except Exception as e:
+    print(f"Database initialization failed: {e}", file=sys.stderr)
 
 @login_manager.user_loader
 def load_user(user_id):
