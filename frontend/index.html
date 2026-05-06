@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planora | Premium Catering Management</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- AOS -->
+    <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- JS LIBS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        :root {
+            --nav-height: 70px;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #0a0a0a;
+            color: white;
+        }
+
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--nav-height);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            background: rgba(10, 10, 10, 0.85);
+            backdrop-filter: blur(10px);
+        }
+
+        main#main-content {
+            padding-top: var(--nav-height);
+            min-height: 100vh;
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 20px;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            font-weight: 500;
+            transition: 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #cfa616;
+        }
+
+        .btn-primary {
+            background: #cfa616;
+            color: black;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+        }
+
+        .btn-outline {
+            border: 1px solid #cfa616;
+            color: #cfa616;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="index.html" class="logo">
+            <img src="images/logo.jpg" alt="Planora Logo" style="height:40px;">
+        </a>
+
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+            <li><a href="https://planora-catering-3.onrender.com/login">Login</a></li>
+            <li><a href="https://planora-catering-3.onrender.com/register" class="btn-primary" style="color:black;">Join Now</a></li>
+        </ul>
+    </nav>
+
+    <main id="main-content">
+        
+        <!-- HERO SECTION -->
+        <section class="hero" style="text-align: center; padding: 100px 20px;">
+            <h1 data-aos="fade-up" style="font-size: 3.5rem; margin-bottom: 20px;">Elite Catering for Extraordinary Events.</h1>
+            <p data-aos="fade-up" data-aos-delay="200" style="font-size: 1.2rem; color: #aaa; max-width: 800px; margin: 0 auto 40px;">
+                From intimate gatherings to grand celebrations, Planora delivers culinary excellence and flawless service tailored to your vision.
+            </p>
+
+            <div data-aos="fade-up" data-aos-delay="400">
+                <a href="https://planora-catering-3.onrender.com/book" class="btn-primary">Start Planning</a>
+                <a href="#packages" class="btn-outline" style="margin-left: 1rem;">View Packages</a>
+            </div>
+        </section>
+
+        <!-- PACKAGES SECTION -->
+        <section id="packages" style="padding: 80px 20px;">
+            <h2 style="text-align: center; font-size: 2.5rem; margin-bottom: 50px;" data-aos="fade-up">Our Signature Packages</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; max-width: 1200px; margin: auto;">
+                
+                <!-- SILVER -->
+                <div class="glass card" data-aos="fade-up" data-aos-delay="100" style="background: rgba(255,255,255,0.05); padding: 40px; border-radius: 20px; text-align: center;">
+                    <h3 style="color: #cfa616;">Silver Package</h3>
+                    <p style="font-size: 2rem; margin: 20px 0;">₹800 <span style="font-size: 1rem; color: #aaa;">/ guest</span></p>
+                    <ul style="list-style: none; padding: 0; color: #aaa; margin-bottom: 30px; line-height: 2;">
+                        <li>✔ 2 Starters</li>
+                        <li>✔ 2 Main Courses</li>
+                        <li>✔ 1 Dessert</li>
+                        <li>✔ Professional Service</li>
+                    </ul>
+                    <a href="https://planora-catering-3.onrender.com/book" class="btn-outline" style="width: 80%;">Select Silver</a>
+                </div>
+
+                <!-- GOLD -->
+                <div class="glass card" data-aos="fade-up" data-aos-delay="200" style="background: rgba(255,255,255,0.1); padding: 40px; border-radius: 20px; text-align: center; border: 1px solid #cfa616;">
+                    <h3 style="color: #cfa616;">Gold Package</h3>
+                    <p style="font-size: 2rem; margin: 20px 0;">₹1200 <span style="font-size: 1rem; color: #aaa;">/ guest</span></p>
+                    <ul style="list-style: none; padding: 0; color: #aaa; margin-bottom: 30px; line-height: 2;">
+                        <li>✔ 3 Starters</li>
+                        <li>✔ 3 Main Courses</li>
+                        <li>✔ 2 Desserts + 1 Drink</li>
+                        <li>✔ Premium Crockery</li>
+                    </ul>
+                    <a href="https://planora-catering-3.onrender.com/book" class="btn-primary" style="width: 80%;">Select Gold</a>
+                </div>
+
+                <!-- PLATINUM -->
+                <div class="glass card" data-aos="fade-up" data-aos-delay="300" style="background: rgba(255,255,255,0.05); padding: 40px; border-radius: 20px; text-align: center;">
+                    <h3 style="color: #cfa616;">Platinum Package</h3>
+                    <p style="font-size: 2rem; margin: 20px 0;">₹1800 <span style="font-size: 1rem; color: #aaa;">/ guest</span></p>
+                    <ul style="list-style: none; padding: 0; color: #aaa; margin-bottom: 30px; line-height: 2;">
+                        <li>✔ Unlimited Starters</li>
+                        <li>✔ Exotic Main Course</li>
+                        <li>✔ 3 Desserts + Mocktails</li>
+                        <li>✔ Live Cooking Stalls</li>
+                    </ul>
+                    <a href="https://planora-catering-3.onrender.com/book" class="btn-outline" style="width: 80%;">Select Platinum</a>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer style="text-align: center; padding: 50px; color: #555; border-top: 1px solid #222;">
+        <p>© 2024 Planora Catering Services</p>
+    </footer>
+
+    <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1000, once: true });
+    </script>
+
+</body>
+</html>

@@ -69,7 +69,7 @@
 
     <!-- ================= NAV ================= -->
     <nav>
-        <a href="{{ url_for('index') }}" class="logo">
+        <a href="https://tranquil-pudding-09a4f3.netlify.app/" class="logo">
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" class="nav-logo" style="height:40px;">
         </a>
 
@@ -78,7 +78,7 @@
         </button>
 
         <ul class="nav-links" id="nav-links">
-            <li><a href="{{ url_for('index') }}">Home</a></li>
+            <li><a href="https://tranquil-pudding-09a4f3.netlify.app/">Home</a></li>
 
             {% if current_user.is_authenticated %}
             {% if current_user.role == 'admin' %}

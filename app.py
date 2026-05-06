@@ -37,7 +37,7 @@ def load_user(user_id):
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return redirect("https://tranquil-pudding-09a4f3.netlify.app/")
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
