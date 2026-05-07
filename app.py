@@ -10,7 +10,10 @@ from collections import defaultdict
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'planora-secret-key-123'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///planora.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///planora.db')
+# Handle Render's postgres:// vs postgresql:// issue
+if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
+    app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 CORS(app) # Enable CORS for all routes
