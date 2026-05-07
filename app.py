@@ -44,6 +44,16 @@ try:
                 admin = User(name="Admin", email="admin@planora.com", role="admin")
                 admin.set_password("admin123")
                 db.session.add(admin)
+                
+            # Create default employee if not exists
+            if not User.query.filter_by(email='john@planora.com').first():
+                emp = User(name="John Doe", email="john@planora.com", role="employee")
+                emp.set_password("emp123")
+                db.session.add(emp)
+                
+                # Also create the Employee profile record
+                employee_profile = Employee(name="John Doe", role="Chef", email="john@planora.com")
+                db.session.add(employee_profile)
             
             db.session.commit()
             print("Database seeded successfully!", file=sys.stderr)
