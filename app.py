@@ -55,6 +55,21 @@ def login():
         flash('Invalid email or password', 'danger')
     return render_template('login.html')
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    if current_user.is_authenticated and current_user.role == 'admin':
+        return redirect(url_for('admin_dashboard'))
+        
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email, role='admin').first()
+        if user and user.check_password(password):
+            login_user(user)
+            return redirect(url_for('admin_dashboard'))
+        flash('Invalid admin credentials', 'danger')
+    return render_template('admin/login.html')
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -293,7 +308,9 @@ def get_calendar_events():
 @app.route('/admin')
 @login_required
 def admin_dashboard():
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role != 'admin':
+        flash('Unauthorized access. Please login as Administrator.', 'danger')
+        return redirect(url_for('login'))
     bookings = Booking.query.order_by(Booking.created_at.desc()).all()
     employees = Employee.query.all()
     

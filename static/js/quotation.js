@@ -3,6 +3,7 @@ let state = {
     guests: 50,
     event_type_id: null,
     package_id: null,
+    package_price: 0, // Store package base price
     selected_items: [], // Array of {id, price}
     service_type: 'Normal',
     event_date: null,
@@ -38,19 +39,24 @@ function instantQuote() {
     nextStep(4);
 }
 // --- Availability Check ---
-document.getElementById('event_date').addEventListener('change', function(e) {
+document.getElementById('eventDate').addEventListener('change', function(e) {
     const date = e.target.value;
+    if (!date) return;
+    
     state.event_date = date;
     const msgEl = document.getElementById('availability_msg');
     const btn = document.getElementById('btnStep1');
     
-    // Frontend date validation
-    const selectedDate = new Date(date);
+    // Robust date validation (YYYY-MM-DD parsing to local date)
+    const parts = date.split('-');
+    const selectedDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    selectedDate.setHours(0,0,0,0);
+    
     const today = new Date();
     today.setHours(0,0,0,0);
     
     const diffTime = selectedDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDays < 0) {
         msgEl.innerText = "❌ Cannot book events for past dates.";
@@ -60,8 +66,16 @@ document.getElementById('event_date').addEventListener('change', function(e) {
     }
     
     if (diffDays < 15) {
-        msgEl.innerText = "❌ Booking must be made at least 15 days in advance.";
+        const minDate = new Date(today.getTime() + 15 * 86400000);
+        msgEl.innerText = "❌ Booking must be made at least 15 days in advance (Earliest: " + minDate.toDateString() + ").";
         msgEl.style.color = "#ff4444";
+        btn.disabled = true;
+        return;
+    }
+
+    if (state.guests < 10) {
+        msgEl.innerText = "⚠️ Please enter at least 10 guests first.";
+        msgEl.style.color = "#ffc107";
         btn.disabled = true;
         return;
     }
@@ -81,6 +95,10 @@ document.getElementById('event_date').addEventListener('change', function(e) {
                 msgEl.style.color = "#ff4444";
                 btn.disabled = true;
             }
+        })
+        .catch(err => {
+            console.error(err);
+            msgEl.innerText = "❌ Connection error. Try again.";
         });
 });
 
@@ -91,23 +109,31 @@ document.getElementById('guests').addEventListener('input', function(e) {
     
     if (state.guests >= 10) {
         document.getElementById('guest_warning').style.display = 'none';
-    } else if (state.step === 1) {
+        // If they have a date selected, re-trigger the date change logic to enable button
+        const dateInput = document.getElementById('eventDate');
+        if (dateInput.value) {
+            dateInput.dispatchEvent(new Event('change'));
+        }
+    } else {
         document.getElementById('guest_warning').style.display = 'block';
+        document.getElementById('btnStep1').disabled = true;
     }
     
-    document.getElementById('summary_guests').innerText = state.guests;
+    const summaryGuests = document.getElementById('summary_guests');
+    if (summaryGuests) summaryGuests.innerText = state.guests;
+    
     updateQuotation();
-    updateSuggestions();
+    if (typeof updateSuggestions === 'function') updateSuggestions();
 });
 
 // --- Package Selection ---
-function selectPackage(id, name, pricePerGuest) {
+function selectPackage(id, name, pricePerGuest, el) {
     state.package_id = id;
-    document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('active'));
-    event.currentTarget.classList.add('active');
+    state.package_price = parseFloat(pricePerGuest);
     
-    // The price per guest logic update (Plan: Package Price used if selected)
-    // We update the base calculation to include package base if active
+    document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    
     updateQuotation();
 }
 
@@ -135,8 +161,16 @@ function selectService(type, el) {
 
 // --- Quotation Calculation ---
 function updateQuotation() {
+    console.log("Updating Quotation...", state);
     const eventSelect = document.getElementById('event_type');
-    const eventBase = parseFloat(eventSelect.options[eventSelect.selectedIndex].dataset.price) || 0;
+    if (!eventSelect || eventSelect.selectedIndex === -1) {
+        console.warn("Event select not ready");
+        return;
+    }
+
+    const selectedOption = eventSelect.options[eventSelect.selectedIndex];
+    const eventBase = parseFloat(selectedOption.dataset.price) || 0;
+    const eventName = selectedOption.text;
     
     let foodCost = 0;
     state.selected_items.forEach(item => foodCost += item.price);
@@ -148,22 +182,30 @@ function updateQuotation() {
         'Buffet Setup': 0.15,
         'Live Cooking': 0.25
     };
-    const multiplier = 1 + serviceMultipliers[state.service_type];
+    const multiplier = 1 + (serviceMultipliers[state.service_type] || 0);
     
-    // Total=((Event Base+Food Cost)×Guests)×(1+Service Multiplier)+GST
-    const subtotal = ((eventBase + foodCost) * state.guests) * multiplier;
+    const packageBase = state.package_price || 0;
+    const guestCount = state.guests || 0;
+    
+    const subtotal = ((eventBase + packageBase + foodCost) * guestCount) * multiplier;
     const gst = subtotal * 0.18;
     const total = subtotal + gst;
     
     state.total = total;
 
     // Update UI
-    document.getElementById('price_base').innerText = `₹${eventBase}`;
-    document.getElementById('price_food').innerText = `₹${foodCost}`;
-    document.getElementById('price_service').innerText = state.service_type === 'Normal' ? 'Included' : `+${(serviceMultipliers[state.service_type]*100)}%`;
-    document.getElementById('price_subtotal').innerText = `₹${subtotal.toLocaleString()}`;
-    document.getElementById('price_gst').innerText = `₹${gst.toLocaleString()}`;
-    document.getElementById('price_total').innerText = `₹${total.toLocaleString()}`;
+    const safeSetText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = text;
+    };
+
+    safeSetText('price_base', `₹${eventBase.toLocaleString()}`);
+    safeSetText('price_food', `₹${(packageBase + foodCost).toLocaleString()}`);
+    safeSetText('price_service', state.service_type === 'Normal' ? 'Included' : `+${(serviceMultipliers[state.service_type]*100)}%`);
+    safeSetText('price_subtotal', `₹${subtotal.toLocaleString()}`);
+    safeSetText('price_gst', `₹${gst.toLocaleString()}`);
+    safeSetText('price_total', `₹${total.toLocaleString()}`);
+    safeSetText('summary_guests', guestCount);
 }
 
 // --- Premium Payment Processor Logic ---
@@ -265,4 +307,11 @@ function updateSuggestions() {
 }
 
 // Initialize
-updateQuotation();
+document.addEventListener('DOMContentLoaded', function() {
+    // Read initial values from DOM
+    const guestsInput = document.getElementById('guests');
+    if (guestsInput) state.guests = parseInt(guestsInput.value) || 50;
+    
+    updateQuotation();
+    if (typeof updateSuggestions === 'function') updateSuggestions();
+});

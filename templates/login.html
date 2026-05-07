@@ -47,8 +47,8 @@
     /* ================= LOGIN LAYOUT ================= */
     .login-wrapper {
         display: flex;
-        height: calc(100vh - 70px);
-        /* 🔥 FIX NAVBAR SPACE */
+        min-height: calc(100vh - var(--nav-height, 70px));
+        margin-top: 0;
     }
 
     /* LEFT IMAGE */

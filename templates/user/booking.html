@@ -5,39 +5,50 @@
 <div class="booking-bg-wrapper">
     <div class="booking-bg-image"></div>
     <section class="section-padding" style="margin-top: 0; position: relative; z-index: 1;">
-        <div class="grid" style="grid-template-columns: 2fr 1fr; align-items: start;">
-            
-            <!-- STEP-BY-STEP FORM -->
-            <div class="glass card" style="padding: 3rem;">
-                <div id="step1" class="step-container active">
-                    <h2 style="color: var(--primary); margin-bottom: 2rem;">1. Event Details</h2>
-                    <div class="form-group">
-                        <label>Event Date</label>
-                        <input type="date" id="event_date" class="form-control" required>
-                        <p id="availability_msg" style="margin-top: 0.5rem; font-size: 0.9rem;"></p>
+        <div class="container">
+            <div class="grid" style="grid-template-columns: 2fr 1fr; align-items: start; gap: 3rem;">
+                
+                <!-- STEP-BY-STEP FORM -->
+                <div class="glass card" style="padding: 3rem; min-height: 600px;">
+                    <div id="step1" class="step-container active">
+                        <h2 style="color: var(--primary); margin-bottom: 2rem;">1. Event Details</h2>
+                        <div class="form-group">
+                            <label for="eventDate">Select Event Date</label>
+                            <input 
+                                type="date"
+                                id="eventDate"
+                                name="event_date"
+                                class="form-control"
+                                style="font-family: inherit;"
+                                required
+                            >
+                            <small id="dateMessage" style="color:#ff4d4d; display:none; margin-top: 5px;">
+                                ❌ Booking must be made at least 15 days in advance.
+                            </small>
+                            <p id="availability_msg" style="margin-top: 0.5rem; font-size: 0.9rem; font-weight: 500;"></p>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 2rem;">
+                            <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Event Type</label>
+                            <select id="event_type" class="form-control" style="cursor: pointer;">
+                                {% for event in event_types %}
+                                    <option value="{{ event.id }}" data-price="{{ event.base_price }}">{{ event.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 2.5rem;">
+                            <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Number of Guests (Min 10)</label>
+                            <input type="number" id="guests" class="form-control" value="50" min="10" placeholder="Min 10 guests">
+                            <small id="guest_warning" style="color: #ff4444; display: none; font-weight: 500; margin-top: 5px;">Minimum 10 guests required for ordering.</small>
+                        </div>
+                        <button class="btn btn-primary" onclick="nextStep(2)" id="btnStep1" disabled style="width: 100%; padding: 1.2rem;">Continue to Packages</button>
                     </div>
-                    <div class="form-group">
-                        <label>Event Type</label>
-                        <select id="event_type" class="form-control">
-                            {% for event in event_types %}
-                                <option value="{{ event.id }}" data-price="{{ event.base_price }}">{{ event.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Number of Guests (Min 10)</label>
-                        <input type="number" id="guests" class="form-control" value="50" min="10">
-                        <small id="guest_warning" style="color: #ff4444; display: none;">Minimum 10 guests required for ordering.</small>
-                    </div>
-                    <button class="btn btn-primary" onclick="nextStep(2)" id="btnStep1" disabled>Continue to Packages</button>
-                </div>
 
                 <div id="step2" class="step-container">
                     <h2 style="color: var(--primary); margin-bottom: 2rem;">2. Select a Package</h2>
                     <p style="color: var(--text-dim); margin-bottom: 2rem;">Packages pre-populate your menu. You can still customize later.</p>
                     <div class="grid" style="grid-template-columns: 1fr 1fr 1fr;">
                         {% for pkg in packages %}
-                            <div class="glass card pkg-card" style="cursor: pointer; padding: 1.5rem; text-align: center;" onclick="selectPackage('{{ pkg.id }}', '{{ pkg.name }}', {{ pkg.price_per_guest }})">
+                            <div class="glass card pkg-card" style="cursor: pointer; padding: 1.5rem; text-align: center;" onclick="selectPackage('{{ pkg.id }}', '{{ pkg.name }}', {{ pkg.price_per_guest }}, this)">
                                 <h4 style="color: var(--primary);">{{ pkg.name }}</h4>
                                 <p>₹{{ pkg.price_per_guest }}/p</p>
                                 <small>{{ pkg.items_summary }}</small>
@@ -290,5 +301,32 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/quotation.js') }}"></script>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const eventDateInput = document.getElementById("eventDate");
+        const dateMessage = document.getElementById("dateMessage");
+
+        let today = new Date();
+        // Add 15 days
+        today.setDate(today.getDate() + 15);
+        let minDate = today.toISOString().split('T')[0];
+
+        // Block past dates and next 14 days
+        eventDateInput.setAttribute("min", minDate);
+
+        eventDateInput.addEventListener("change", function () {
+            let selectedDate = new Date(this.value);
+            let minimumDate = new Date(minDate);
+
+            if (selectedDate < minimumDate) {
+                dateMessage.style.display = "block";
+                alert("❌ Past bookings and bookings before 15 days are not allowed.");
+                this.value = "";
+            } else {
+                dateMessage.style.display = "none";
+            }
+        });
+    });
+    </script>
+    <script src="{{ url_for('static', filename='js/quotation.js') }}"></script>
 {% endblock %}
