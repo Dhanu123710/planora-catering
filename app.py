@@ -25,7 +25,29 @@ login_manager.init_app(app)
 try:
     with app.app_context():
         db.create_all()
-    print("Database initialized successfully!", file=sys.stderr)
+        from models import EventType, Package, User
+        # Auto-seed if database is empty
+        if not EventType.query.first():
+            print("Seeding database...", file=sys.stderr)
+            wedding = EventType(name="Wedding", base_price=500.0)
+            birthday = EventType(name="Birthday", base_price=300.0)
+            corporate = EventType(name="Corporate", base_price=450.0)
+            anniversary = EventType(name="Anniversary", base_price=400.0)
+            db.session.add_all([wedding, birthday, corporate, anniversary])
+            
+            silver = Package(name="Silver", price_per_guest=800.0, items_summary="2 Starters, 2 Main, 1 Dessert")
+            gold = Package(name="Gold", price_per_guest=1200.0, items_summary="3 Starters, 3 Main, 2 Desserts")
+            platinum = Package(name="Platinum", price_per_guest=1800.0, items_summary="Unlimited Starters, Exotic Main, Live Stalls")
+            db.session.add_all([silver, gold, platinum])
+            
+            if not User.query.filter_by(role='admin').first():
+                admin = User(name="Admin", email="admin@planora.com", role="admin")
+                admin.set_password("admin123")
+                db.session.add(admin)
+            
+            db.session.commit()
+            print("Database seeded successfully!", file=sys.stderr)
+    print("Database ready!", file=sys.stderr)
 except Exception as e:
     print(f"Database initialization failed: {e}", file=sys.stderr)
 
