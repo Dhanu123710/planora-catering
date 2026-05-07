@@ -90,6 +90,43 @@ def login():
         flash('Invalid email or password', 'danger')
     return render_template('login.html')
 
+@app.route('/repair-db')
+def repair_db():
+    try:
+        from models import EventType, Package, User
+        # Seed everything
+        if not EventType.query.filter_by(name='Wedding').first():
+            db.session.add_all([
+                EventType(name="Wedding", base_price=500.0),
+                EventType(name="Birthday", base_price=300.0),
+                EventType(name="Corporate", base_price=450.0),
+                EventType(name="Anniversary", base_price=400.0)
+            ])
+        
+        if not Package.query.filter_by(name='Silver').first():
+            db.session.add_all([
+                Package(name="Silver", price_per_guest=800.0, items_summary="2 Starters, 2 Main, 1 Dessert"),
+                Package(name="Gold", price_per_guest=1200.0, items_summary="3 Starters, 3 Main, 2 Desserts"),
+                Package(name="Platinum", price_per_guest=1800.0, items_summary="Unlimited Starters, Exotic Main, Live Stalls")
+            ])
+            
+        if not User.query.filter_by(role='admin').first():
+            admin = User(name="Admin", email="admin@planora.com", role="admin")
+            admin.set_password("admin123")
+            db.session.add(admin)
+
+        if not User.query.filter_by(email='john@planora.com').first():
+            emp = User(name="John Doe", email="john@planora.com", role="employee")
+            emp.set_password("emp123")
+            db.session.add(emp)
+            if not Employee.query.filter_by(email='john@planora.com').first():
+                db.session.add(Employee(name="John Doe", role="Chef", email="john@planora.com"))
+
+        db.session.commit()
+        return "✅ Database Repaired! You can now login and book events."
+    except Exception as e:
+        return f"❌ Repair failed: {str(e)}"
+
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
     if current_user.is_authenticated and current_user.role == 'admin':
