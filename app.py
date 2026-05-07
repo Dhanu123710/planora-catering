@@ -53,9 +53,8 @@ try:
                 emp = User(name="John Doe", email="john@planora.com", role="employee")
                 emp.set_password("emp123")
                 db.session.add(emp)
-                
-                # Also create the Employee profile record
-                employee_profile = Employee(name="John Doe", role="Chef", email="john@planora.com")
+                db.session.flush()  # Get the emp.id before commit
+                employee_profile = Employee(name="John Doe", contact="9999999999", user_id=emp.id)
                 db.session.add(employee_profile)
             
             db.session.commit()
@@ -119,8 +118,9 @@ def repair_db():
             emp = User(name="John Doe", email="john@planora.com", role="employee")
             emp.set_password("emp123")
             db.session.add(emp)
-            if not Employee.query.filter_by(email='john@planora.com').first():
-                db.session.add(Employee(name="John Doe", role="Chef", email="john@planora.com"))
+            db.session.flush()  # Get emp.id before commit
+            if not Employee.query.filter_by(user_id=emp.id).first():
+                db.session.add(Employee(name="John Doe", contact="9999999999", user_id=emp.id))
 
         db.session.commit()
         return "✅ Database Repaired! You can now login and book events."
