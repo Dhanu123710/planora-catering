@@ -61,6 +61,12 @@
                 --nav-height: 80px;
             }
         }
+
+        /* 🔥 FIX: Prevent SweetAlert toast from hiding under navbar */
+        .swal2-container.swal2-top-end, .swal2-container.swal2-top-right {
+            top: calc(var(--nav-height) + 10px) !important;
+            z-index: 10000 !important;
+        }
     </style>
 
 </head>
@@ -69,7 +75,7 @@
 
     <!-- ================= NAV ================= -->
     <nav>
-        <a href="https://tranquil-pudding-09a4f3.netlify.app/" class="logo">
+        <a href="{% if current_user.is_authenticated %}{{ url_for('admin_dashboard') if current_user.role == 'admin' else (url_for('employee_dashboard') if current_user.role == 'employee' else url_for('user_dashboard')) }}{% else %}https://tranquil-pudding-09a4f3.netlify.app/{% endif %}" class="logo">
             <img src="{{ url_for('static', filename='images/logo.jpg') }}" class="nav-logo" style="height:40px;">
         </a>
 
@@ -78,7 +84,17 @@
         </button>
 
         <ul class="nav-links" id="nav-links">
-            <li><a href="https://tranquil-pudding-09a4f3.netlify.app/">Home</a></li>
+            {% if current_user.is_authenticated %}
+                {% if current_user.role == 'admin' %}
+                <li><a href="{{ url_for('admin_dashboard') }}">Home</a></li>
+                {% elif current_user.role == 'employee' %}
+                <li><a href="{{ url_for('employee_dashboard') }}">Home</a></li>
+                {% else %}
+                <li><a href="{{ url_for('user_dashboard') }}">Home</a></li>
+                {% endif %}
+            {% else %}
+                <li><a href="https://tranquil-pudding-09a4f3.netlify.app/">Home</a></li>
+            {% endif %}
 
             {% if current_user.is_authenticated %}
             {% if current_user.role == 'admin' %}
@@ -108,9 +124,9 @@
             (function () {
                 const Toast = Swal.mixin({
                     toast: true,
-                    position: 'top-end',
+                    position: 'bottom-end',
                     showConfirmButton: false,
-                    timer: 3000
+                    timer: 30000
                 });
 
                 {% for category, message in messages %}

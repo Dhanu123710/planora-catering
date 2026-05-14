@@ -5,6 +5,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_cors import CORS
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from models import db, User, EventType, MenuItem, Package, Booking, BookingItem, Employee, Assignment
+from itsdangerous import URLSafeTimedSerializer
 from datetime import datetime
 from collections import defaultdict
 
@@ -16,6 +17,7 @@ if app.config['SQLALCHEMY_DATABASE_URI'].startswith("postgres://"):
     app.config['SQLALCHEMY_DATABASE_URI'] = app.config['SQLALCHEMY_DATABASE_URI'].replace("postgres://", "postgresql://", 1)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 CORS(app) # Enable CORS for all routes
 
 db.init_app(app)
@@ -42,6 +44,20 @@ try:
             gold = Package(name="Gold", price_per_guest=1200.0, items_summary="3 Starters, 3 Main, 2 Desserts")
             platinum = Package(name="Platinum", price_per_guest=1800.0, items_summary="Unlimited Starters, Exotic Main, Live Stalls")
             db.session.add_all([silver, gold, platinum])
+            
+            from models import MenuItem
+            if not MenuItem.query.first():
+                db.session.add_all([
+                    MenuItem(name="Paneer Tikka", category="Starter", price=150.0),
+                    MenuItem(name="Spring Rolls", category="Starter", price=120.0),
+                    MenuItem(name="Butter Chicken", category="Main Course", price=350.0),
+                    MenuItem(name="Dal Makhani", category="Main Course", price=250.0),
+                    MenuItem(name="Naan", category="Main Course", price=40.0),
+                    MenuItem(name="Gulab Jamun", category="Dessert", price=80.0),
+                    MenuItem(name="Ice Cream", category="Dessert", price=100.0),
+                    MenuItem(name="Mojito", category="Drink", price=120.0),
+                    MenuItem(name="Coke", category="Drink", price=60.0)
+                ])
             
             if not User.query.filter_by(role='admin').first():
                 admin = User(name="Admin", email="admin@planora.com", role="admin")
@@ -109,6 +125,20 @@ def repair_db():
                 Package(name="Platinum", price_per_guest=1800.0, items_summary="Unlimited Starters, Exotic Main, Live Stalls")
             ])
             
+        from models import MenuItem
+        if not MenuItem.query.first():
+            db.session.add_all([
+                MenuItem(name="Paneer Tikka", category="Starter", price=150.0),
+                MenuItem(name="Spring Rolls", category="Starter", price=120.0),
+                MenuItem(name="Butter Chicken", category="Main Course", price=350.0),
+                MenuItem(name="Dal Makhani", category="Main Course", price=250.0),
+                MenuItem(name="Naan", category="Main Course", price=40.0),
+                MenuItem(name="Gulab Jamun", category="Dessert", price=80.0),
+                MenuItem(name="Ice Cream", category="Dessert", price=100.0),
+                MenuItem(name="Mojito", category="Drink", price=120.0),
+                MenuItem(name="Coke", category="Drink", price=60.0)
+            ])
+            
         if not User.query.filter_by(role='admin').first():
             admin = User(name="Admin", email="admin@planora.com", role="admin")
             admin.set_password("admin123")
@@ -167,6 +197,37 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    reset_url = None
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            token = s.dumps(email, salt='password-reset-salt')
+            reset_url = url_for('reset_password', token=token, _external=True)
+        else:
+            flash('If the email is registered, a reset link has been sent.', 'info')
+    return render_template('forgot_password.html', reset_url=reset_url)
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        email = s.loads(token, salt='password-reset-salt', max_age=3600) # 1 hour validity
+    except:
+        flash('The reset link is invalid or has expired.', 'danger')
+        return redirect(url_for('forgot_password'))
+        
+    if request.method == 'POST':
+        password = request.form.get('password')
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.set_password(password)
+            db.session.commit()
+            flash('Your password has been updated! You can now login.', 'success')
+            return redirect(url_for('login'))
+    return render_template('reset_password.html', token=token)
+
 # --- User Module ---
 
 @app.route('/dashboard')
@@ -213,6 +274,9 @@ def check_availability():
     delta = (event_date - today).days
     if delta < 15:
         return jsonify({'available': False, 'message': 'Booking must be made at least 15 days in advance'})
+        
+    if delta > 180:
+        return jsonify({'available': False, 'message': 'Booking cannot be made more than 6 months in advance'})
     
     # Check if a booking already exists for this date
     existing_booking = Booking.query.filter_by(event_date=event_date).first()
@@ -280,6 +344,9 @@ def create_booking():
         
     if (event_date - today).days < 15:
         return jsonify({'success': False, 'message': 'Booking must be made at least 15 days in advance.'}), 400
+        
+    if (event_date - today).days > 180:
+        return jsonify({'success': False, 'message': 'Booking cannot be made more than 6 months in advance.'}), 400
     
     new_booking = Booking(
         user_id=current_user.id,

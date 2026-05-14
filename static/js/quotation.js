@@ -73,6 +73,14 @@ document.getElementById('eventDate').addEventListener('change', function(e) {
         return;
     }
 
+    if (diffDays > 180) {
+        const maxDate = new Date(today.getTime() + 180 * 86400000);
+        msgEl.innerText = "❌ Booking cannot be made more than 6 months in advance (Latest: " + maxDate.toDateString() + ").";
+        msgEl.style.color = "#ff4444";
+        btn.disabled = true;
+        return;
+    }
+
     if (state.guests < 10) {
         msgEl.innerText = "⚠️ Please enter at least 10 guests first.";
         msgEl.style.color = "#ffc107";
@@ -242,6 +250,9 @@ function confirmPayment() {
         return;
     }
 
+    const payBtn = document.querySelector('button[onclick="confirmPayment()"]');
+    if (payBtn) payBtn.disabled = true;
+
     // 1. Show Mock Payment Success
     alert("Payment Successful!");
 
@@ -282,6 +293,7 @@ function confirmPayment() {
             alert("Error: " + (data.message || "Could not save order."));
             document.getElementById('stage-form').style.display = 'block';
             document.getElementById('stage-finalizing').style.display = 'none';
+            if (payBtn) payBtn.disabled = false;
         }
     })
     .catch(err => {
@@ -289,6 +301,7 @@ function confirmPayment() {
         alert("A technical error occurred. Please try again.");
         document.getElementById('stage-form').style.display = 'block';
         document.getElementById('stage-finalizing').style.display = 'none';
+        if (payBtn) payBtn.disabled = false;
     });
 }
 
