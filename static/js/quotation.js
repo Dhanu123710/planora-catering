@@ -1,6 +1,9 @@
 let state = {
     step: 1,
     guests: 50,
+    food_category: 'Veg',
+    veg_guests: 0,
+    non_veg_guests: 0,
     event_type_id: null,
     package_id: null,
     package_price: 0, // Store package base price
@@ -22,11 +25,133 @@ function nextStep(step) {
             alert("Please select a date first.");
             return;
         }
+        if (state.food_category === 'Both') {
+            if (state.veg_guests + state.non_veg_guests !== state.guests) {
+                document.getElementById('both_guest_warning').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('both_guest_warning').style.display = 'none';
+            }
+        }
+    }
+    
+    // Logic for Step 3: Preload and render items
+    if (step === 3) {
+        renderCustomizeMenu();
     }
     
     document.querySelectorAll('.step-container').forEach(s => s.classList.remove('active'));
     document.getElementById(`step${step}`).classList.add('active');
     state.step = step;
+}
+
+function renderCustomizeMenu() {
+    const eventSelect = document.getElementById('event_type');
+    const packageItemsStr = eventSelect.options[eventSelect.selectedIndex].dataset.packageItems || '';
+    const packageItemIds = packageItemsStr.split(',').filter(id => id);
+
+    const includedList = document.getElementById('included-items-list');
+    const additionalList = document.getElementById('additional-items-list');
+    
+    includedList.innerHTML = '';
+    additionalList.innerHTML = '';
+
+    const menuData = document.querySelectorAll('.menu-item-source');
+    
+    // Maintain state for custom items
+    const previousItems = [...state.selected_items];
+    state.selected_items = [];
+
+    menuData.forEach(itemEl => {
+        const id = itemEl.dataset.id;
+        const name = itemEl.dataset.name;
+        const price = parseFloat(itemEl.dataset.price);
+        const foodType = itemEl.dataset.foodType;
+        const isPackage = packageItemIds.includes(id);
+
+        // Filter based on food category selection from Step 1
+        if (state.food_category !== 'Both') {
+            const currentType = state.food_category === 'Veg' ? 'veg' : 'non-veg';
+            if (foodType !== currentType) return;
+        }
+
+        // Determine if selected and what quantity
+        let isSelected = false;
+        let quantity = state.guests;
+        
+        const prev = previousItems.find(i => i.id === id);
+        
+        if (isPackage) {
+            // Package items are selected by default unless user explicitly unchecked them (qty became 0)
+            isSelected = prev ? prev.quantity > 0 : true;
+            quantity = prev ? prev.quantity : state.guests;
+            if (isSelected) state.selected_items.push({id, name, price, quantity, isPackage: true});
+        } else if (prev && prev.quantity > 0) {
+            isSelected = true;
+            quantity = prev.quantity;
+            state.selected_items.push({id, name, price, quantity, isPackage: false});
+        }
+
+        const itemHtml = `
+            <div class="menu-list-item ${isSelected ? 'selected' : ''}" data-id="${id}" style="border-left: 4px solid ${isSelected ? 'var(--primary)' : 'transparent'};">
+                <div class="item-info">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleItemSelection('${id}', this.checked)" style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--primary);">
+                    <div class="item-type-dot" style="background: ${foodType === 'veg' ? '#10b981' : '#ff4444'}"></div>
+                    <div>
+                        <div style="font-weight: 600; color: ${isSelected ? 'white' : 'var(--text-dim)'};">${name}</div>
+                        <div style="font-size: 0.8rem; color: var(--text-dim);">₹${price} / person</div>
+                    </div>
+                </div>
+                ${isSelected ? `
+                <div class="qty-controls">
+                    <button class="qty-btn" onclick="updateItemQty('${id}', -10)"><i class="fas fa-minus"></i></button>
+                    <span class="qty-val">${quantity}</span>
+                    <button class="qty-btn" onclick="updateItemQty('${id}', 10)"><i class="fas fa-plus"></i></button>
+                </div>
+                ` : `
+                <div style="color: var(--text-dim); font-size: 0.8rem;">Click to add</div>
+                `}
+            </div>
+        `;
+
+        if (isPackage) {
+            includedList.insertAdjacentHTML('beforeend', itemHtml);
+        } else {
+            additionalList.insertAdjacentHTML('beforeend', itemHtml);
+        }
+    });
+
+    updateQuotation();
+}
+
+function toggleItemSelection(id, checked) {
+    const item = state.selected_items.find(i => i.id === id);
+    if (checked) {
+        if (!item) {
+            const source = document.querySelector(`.menu-item-source[data-id="${id}"]`);
+            const packageItemsStr = document.getElementById('event_type').options[document.getElementById('event_type').selectedIndex].dataset.packageItems || '';
+            const isPackage = packageItemsStr.split(',').includes(id);
+            
+            state.selected_items.push({
+                id: id,
+                name: source.dataset.name,
+                price: parseFloat(source.dataset.price),
+                quantity: state.guests,
+                isPackage: isPackage
+            });
+        }
+    } else {
+        state.selected_items = state.selected_items.filter(i => i.id !== id);
+    }
+    renderCustomizeMenu();
+}
+
+function updateItemQty(id, delta) {
+    const item = state.selected_items.find(i => i.id === id);
+    if (item) {
+        item.quantity = Math.max(10, item.quantity + delta); // Keep at least 10 if selected
+    }
+    renderCustomizeMenu();
 }
 
 // --- Instant Quote (Skip Customization) ---
@@ -134,6 +259,32 @@ document.getElementById('guests').addEventListener('input', function(e) {
     if (typeof updateSuggestions === 'function') updateSuggestions();
 });
 
+document.getElementById('food_category').addEventListener('change', function(e) {
+    state.food_category = e.target.value;
+    const bothSection = document.getElementById('both_guests_section');
+    if (state.food_category === 'Both') {
+        bothSection.style.display = 'block';
+    } else {
+        bothSection.style.display = 'none';
+        state.veg_guests = 0;
+        state.non_veg_guests = 0;
+    }
+});
+
+document.getElementById('veg_guests').addEventListener('input', function(e) {
+    state.veg_guests = parseInt(e.target.value) || 0;
+    if (state.veg_guests + state.non_veg_guests === state.guests) {
+        document.getElementById('both_guest_warning').style.display = 'none';
+    }
+});
+
+document.getElementById('non_veg_guests').addEventListener('input', function(e) {
+    state.non_veg_guests = parseInt(e.target.value) || 0;
+    if (state.veg_guests + state.non_veg_guests === state.guests) {
+        document.getElementById('both_guest_warning').style.display = 'none';
+    }
+});
+
 // --- Package Selection ---
 function selectPackage(id, name, pricePerGuest, el) {
     state.package_id = id;
@@ -145,19 +296,64 @@ function selectPackage(id, name, pricePerGuest, el) {
     updateQuotation();
 }
 
-// --- Menu Customization ---
-function toggleItem(id, price, el) {
-    const index = state.selected_items.findIndex(i => i.id === id);
-    if (index > -1) {
-        state.selected_items.splice(index, 1);
-        el.classList.remove('selected');
-    } else {
-        state.selected_items.push({id, price});
-        el.classList.add('selected');
+function openPackageMenu() {
+    const eventSelect = document.getElementById('event_type');
+    const packageItemsStr = eventSelect.options[eventSelect.selectedIndex].dataset.packageItems || '';
+    const packageItemIds = packageItemsStr.split(',').filter(id => id);
+    
+    if (packageItemIds.length === 0) {
+        alert("No default items set for this event type yet.");
+        return;
     }
-    updateQuotation();
-    updateSuggestions();
+    
+    const eventName = eventSelect.options[eventSelect.selectedIndex].text;
+    document.getElementById('packageMenuTitle').innerText = eventName + " Package Menu";
+    
+    const listContainer = document.getElementById('packageMenuList');
+    listContainer.innerHTML = '';
+    
+    packageItemIds.forEach(id => {
+        const itemEl = document.querySelector(`.menu-item-source[data-id="${id}"]`);
+        if (!itemEl) return;
+        
+        const name = itemEl.dataset.name;
+        const foodType = itemEl.dataset.foodType;
+
+        const div = document.createElement('div');
+        div.style.background = 'rgba(255,255,255,0.05)';
+        div.style.padding = '0.8rem 1rem';
+        div.style.borderRadius = '10px';
+        div.style.border = '1px solid rgba(255,255,255,0.1)';
+        div.style.display = 'flex';
+        div.style.alignItems = 'center';
+        div.style.gap = '0.5rem';
+        
+        const dot = document.createElement('span');
+        dot.style.width = '8px';
+        dot.style.height = '8px';
+        dot.style.borderRadius = '50%';
+        dot.style.background = foodType === 'veg' ? '#10b981' : '#ff4444';
+        dot.style.display = 'inline-block';
+        
+        const text = document.createElement('span');
+        text.innerText = name;
+        text.style.color = 'white';
+        text.style.fontSize = '0.95rem';
+        
+        div.appendChild(dot);
+        div.appendChild(text);
+        listContainer.appendChild(div);
+    });
+    
+    document.getElementById('packageMenuOverlay').style.display = 'flex';
 }
+
+function closePackageMenu() {
+    document.getElementById('packageMenuOverlay').style.display = 'none';
+}
+
+// --- Menu Customization ---
+
 
 // --- Service Type ---
 function selectService(type, el) {
@@ -181,7 +377,9 @@ function updateQuotation() {
     const eventName = selectedOption.text;
     
     let foodCost = 0;
-    state.selected_items.forEach(item => foodCost += item.price);
+    state.selected_items.forEach(item => {
+        foodCost += (item.price * item.quantity);
+    });
     
     state.event_type_id = eventSelect.value;
     
@@ -195,7 +393,7 @@ function updateQuotation() {
     const packageBase = state.package_price || 0;
     const guestCount = state.guests || 0;
     
-    const subtotal = ((eventBase + packageBase + foodCost) * guestCount) * multiplier;
+    const subtotal = ((eventBase + packageBase) * guestCount + foodCost) * multiplier;
     const gst = subtotal * 0.18;
     const total = subtotal + gst;
     
@@ -208,7 +406,7 @@ function updateQuotation() {
     };
 
     safeSetText('price_base', `₹${eventBase.toLocaleString()}`);
-    safeSetText('price_food', `₹${(packageBase + foodCost).toLocaleString()}`);
+    safeSetText('price_food', `₹${(packageBase * guestCount + foodCost).toLocaleString()}`);
     safeSetText('price_service', state.service_type === 'Normal' ? 'Included' : `+${(serviceMultipliers[state.service_type]*100)}%`);
     safeSetText('price_subtotal', `₹${subtotal.toLocaleString()}`);
     safeSetText('price_gst', `₹${gst.toLocaleString()}`);
@@ -262,9 +460,12 @@ function confirmPayment() {
         event_type_id: state.event_type_id,
         package_id: state.package_id,
         guests: state.guests,
+        food_category: state.food_category,
+        veg_guests: state.veg_guests,
+        non_veg_guests: state.non_veg_guests,
         total_price: state.total,
         service_type: state.service_type,
-        items: state.selected_items.map(i => i.id),
+        items: state.selected_items.map(i => ({id: i.id, quantity: i.quantity})),
         notes: document.getElementById('notes').value,
         contact_phone: phone,
         delivery_address: address,

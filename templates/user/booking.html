@@ -31,7 +31,7 @@
                             <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Event Type</label>
                             <select id="event_type" class="form-control" style="cursor: pointer;">
                                 {% for event in event_types %}
-                                    <option value="{{ event.id }}" data-price="{{ event.base_price }}">{{ event.name }}</option>
+                                    <option value="{{ event.id }}" data-price="{{ event.base_price }}" data-package-items="{{ event.package_items }}">{{ event.name }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -39,6 +39,27 @@
                             <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Number of Guests (Min 10)</label>
                             <input type="number" id="guests" class="form-control" value="50" min="10" placeholder="Min 10 guests">
                             <small id="guest_warning" style="color: #ff4444; display: none; font-weight: 500; margin-top: 5px;">Minimum 10 guests required for ordering.</small>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 2.5rem;">
+                            <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Food Category</label>
+                            <select id="food_category" class="form-control" style="cursor: pointer;">
+                                <option value="Veg">Veg</option>
+                                <option value="Non-Veg">Non-Veg</option>
+                                <option value="Both">Both</option>
+                            </select>
+                        </div>
+                        <div id="both_guests_section" style="display: none; margin-bottom: 2.5rem;">
+                            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                                <div class="form-group">
+                                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Veg Guests</label>
+                                    <input type="number" id="veg_guests" class="form-control" value="0" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Non-Veg Guests</label>
+                                    <input type="number" id="non_veg_guests" class="form-control" value="0" min="0">
+                                </div>
+                            </div>
+                            <small id="both_guest_warning" style="color: #ff4444; display: none; font-weight: 500; margin-top: 5px;">Total Veg and Non-Veg guest count must equal total number of guests.</small>
                         </div>
                         <button class="btn btn-primary" onclick="nextStep(2)" id="btnStep1" disabled style="width: 100%; padding: 1.2rem;">Continue to Packages</button>
                     </div>
@@ -55,8 +76,9 @@
                             </div>
                         {% endfor %}
                     </div>
-                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem; flex-wrap: wrap;">
                         <button class="btn btn-outline" onclick="nextStep(1)">Back</button>
+                        <button class="btn btn-primary" onclick="openPackageMenu()" style="background: var(--primary); color: white;">View Package Menu</button>
                         <button class="btn btn-primary" onclick="nextStep(3)">Customize Menu</button>
                         <button class="btn btn-primary" style="background: var(--accent);" onclick="instantQuote()">Instant Quotation</button>
                     </div>
@@ -64,23 +86,41 @@
 
                 <div id="step3" class="step-container">
                     <h2 style="color: var(--primary); margin-bottom: 2rem;">3. Customize Menu</h2>
-                    <div id="menu-categories">
-                        {% set categories = ['Starter', 'Main Course', 'Dessert', 'Drink'] %}
-                        {% for cat in categories %}
-                            <h4 style="margin: 1.5rem 0 1rem; color: var(--primary);">{{ cat }}</h4>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
-                                {% for item in menu_items if item.category == cat %}
-                                    <div class="glass card item-card" style="padding: 1rem; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; text-align: center; border-radius: 15px; transition: transform 0.3s ease, box-shadow 0.3s ease;" onclick="toggleItem('{{ item.id }}', {{ item.price }}, this)">
-                                        <input type="checkbox" id="item_{{ item.id }}" style="display: none;">
-                                        <img src="{{ url_for('static', filename='images/' ~ (item.image_url if item.image_url else 'default_food.jpg')) }}" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'" alt="{{ item.name }}" style="width: 100%; height: 120px; object-fit: cover; border-radius: 10px; margin-bottom: 0.5rem;">
-                                        <span style="font-weight: 600; color: white;">{{ item.name }}</span>
-                                        <span style="color: var(--accent); font-weight: 700; font-size: 0.9rem;">₹{{ item.price }}</span>
-                                    </div>
-                                {% endfor %}
+                    
+                    <!-- Included In Package Section -->
+                    <div style="margin-bottom: 3rem;">
+                        <h4 style="color: var(--accent); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-box-open"></i> Included In Package
+                        </h4>
+                        <div id="included-items-list" class="item-list-container">
+                            <!-- JS will inject items here -->
+                        </div>
+                    </div>
+
+                    <!-- Additional Add-Ons Section -->
+                    <div>
+                        <h4 style="color: var(--primary); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-plus-circle"></i> Additional Custom Items
+                        </h4>
+                        <div id="additional-items-list" class="item-list-container">
+                            <!-- JS will inject items here -->
+                        </div>
+                    </div>
+
+                    <!-- Hidden Template for Menu Items -->
+                    <div id="menu-data" style="display: none;">
+                        {% for item in menu_items %}
+                            <div class="menu-item-source" 
+                                 data-id="{{ item.id }}" 
+                                 data-name="{{ item.name }}" 
+                                 data-price="{{ item.price }}" 
+                                 data-category="{{ item.category }}"
+                                 data-food-type="{{ 'non-veg' if 'chicken' in item.name|lower or 'mutton' in item.name|lower or 'fish' in item.name|lower or 'egg' in item.name|lower or 'prawn' in item.name|lower else 'veg' }}">
                             </div>
                         {% endfor %}
                     </div>
-                    <div style="margin-top: 2rem; display: flex; gap: 1rem;">
+
+                    <div style="margin-top: 3rem; display: flex; gap: 1rem;">
                         <button class="btn btn-outline" onclick="nextStep(2)">Back</button>
                         <button class="btn btn-primary" onclick="nextStep(4)">Service Type</button>
                     </div>
@@ -219,6 +259,21 @@
     </div>
 </div>
 
+<!-- PACKAGE MENU OVERLAY -->
+<div id="packageMenuOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(10px); color: white; padding: 2rem;">
+    <div class="glass card" style="width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; padding: 2.5rem; text-align: center; position: relative; margin: auto; border: 1px solid rgba(207, 166, 22, 0.3); box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <button onclick="closePackageMenu()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: white; font-size: 2rem; cursor: pointer; transition: transform 0.2s;">&times;</button>
+        <h2 id="packageMenuTitle" style="color: var(--primary); margin-bottom: 0.5rem; font-size: 2rem;">Package Menu</h2>
+        <p style="color: var(--text-dim); margin-bottom: 2rem; font-size: 1.1rem;">These items are included by default in your event package.</p>
+        
+        <div id="packageMenuList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; text-align: left;">
+            <!-- Javascript will inject items here -->
+        </div>
+
+        <button class="btn btn-primary" style="margin-top: 2.5rem; background: var(--accent); width: auto; padding: 0.8rem 3rem;" onclick="closePackageMenu()">Got it, Thanks!</button>
+    </div>
+</div>
+
 <style>
     .processing-circle {
         width: 100%;
@@ -297,6 +352,63 @@
     .item-card { transition: var(--transition); border: 1px solid var(--glass-border); }
     .pkg-card:hover { border-color: var(--primary); transform: scale(1.05); }
     .pkg-card.active { border-color: var(--primary); background: rgba(207, 166, 22, 0.1); }
+
+    .item-list-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+    }
+    .menu-list-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem 1.5rem;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+    .menu-list-item:hover {
+        background: rgba(255,255,255,0.06);
+        border-color: var(--primary);
+    }
+    .item-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .item-type-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+    }
+    .qty-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    .qty-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid var(--primary);
+        background: none;
+        color: var(--primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+    }
+    .qty-btn:hover {
+        background: var(--primary);
+        color: black;
+    }
+    .qty-val {
+        font-weight: 600;
+        min-width: 30px;
+        text-align: center;
+    }
 </style>
 
 {% endblock %}
@@ -307,27 +419,30 @@
         const eventDateInput = document.getElementById("eventDate");
         const dateMessage = document.getElementById("dateMessage");
 
+        function getLocalDateString(d) {
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
         let today = new Date();
         // Add 15 days
         today.setDate(today.getDate() + 15);
-        let minDate = today.toISOString().split('T')[0];
+        let minDate = getLocalDateString(today);
         
         let maxLimit = new Date();
-        maxLimit.setDate(maxLimit.getDate() + 165); // 15 + 165 = 180 days from original today
-        let maxDate = maxLimit.toISOString().split('T')[0];
+        maxLimit.setDate(new Date().getDate() + 180); // 180 days from original today
+        let maxDate = getLocalDateString(maxLimit);
 
         // Block past dates and next 14 days, and limit to 6 months
         eventDateInput.setAttribute("min", minDate);
         eventDateInput.setAttribute("max", maxDate);
 
         eventDateInput.addEventListener("change", function () {
-            let selectedDate = new Date(this.value);
-            let minimumDate = new Date(minDate);
-            let maximumDate = new Date(maxDate);
+            let selectedDateStr = this.value;
+            if (!selectedDateStr) return;
 
-            if (selectedDate < minimumDate || selectedDate > maximumDate) {
+            if (selectedDateStr < minDate || selectedDateStr > maxDate) {
                 dateMessage.style.display = "block";
-                if(selectedDate > maximumDate){
+                if(selectedDateStr > maxDate){
                    alert("❌ Bookings cannot be made more than 6 months in advance.");
                 } else {
                    alert("❌ Past bookings and bookings before 15 days are not allowed.");
@@ -339,5 +454,5 @@
         });
     });
     </script>
-    <script src="{{ url_for('static', filename='js/quotation.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/quotation.js') }}?v={{ range(1, 10000) | random }}"></script>
 {% endblock %}

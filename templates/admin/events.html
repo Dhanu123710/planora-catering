@@ -27,7 +27,7 @@
                     </td>
                     <td style="padding: 1rem;">₹{{ event.base_price|int }}</td>
                     <td style="padding: 1rem; text-align: right;">
-                        <button onclick="openEditModal('{{ event.id }}', '{{ event.name|replace("'", "\\'") }}', '{{ event.base_price }}')" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">Edit</button>
+                        <button onclick="openEditModal('{{ event.id }}', '{{ event.name|replace("'", "\\'") }}', '{{ event.base_price }}', '{{ event.package_items }}')" class="btn btn-outline" style="padding: 0.3rem 0.8rem; font-size: 0.8rem;">Edit</button>
                         <a href="{{ url_for('delete_event_type', event_id=event.id) }}" class="btn btn-outline admin-nav-link" style="padding: 0.3rem 0.8rem; font-size: 0.8rem; color: #ff5555; border-color: rgba(255,85,85,0.3);" data-confirm="Delete this event type?">Delete</a>
                     </td>
                 </tr>
@@ -50,6 +50,17 @@
                 <label>Base Price (₹)</label>
                 <input type="number" name="base_price" class="form-control" required min="0" placeholder="Base cost per setup">
             </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem;">Default Package Items</label>
+                <div style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 10px;">
+                    {% for item in menu_items %}
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="package_items" value="{{ item.id }}">
+                            <span style="font-size: 0.9rem;">{{ item.name }} ({{ item.category }})</span>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="submit" class="btn btn-primary" style="flex: 1;">Save Event</button>
                 <button type="button" onclick="closeModal('addModal')" class="btn btn-outline" style="flex: 1;">Cancel</button>
@@ -70,6 +81,17 @@
             <div class="form-group">
                 <label>Base Price (₹)</label>
                 <input type="number" name="base_price" id="edit_price" class="form-control" required min="0">
+            </div>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label style="display: block; margin-bottom: 0.5rem;">Default Package Items</label>
+                <div style="max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 10px;">
+                    {% for item in menu_items %}
+                        <label style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; cursor: pointer;">
+                            <input type="checkbox" name="package_items" value="{{ item.id }}" class="edit-item-checkbox">
+                            <span style="font-size: 0.9rem;">{{ item.name }} ({{ item.category }})</span>
+                        </label>
+                    {% endfor %}
+                </div>
             </div>
             <div style="display: flex; gap: 1rem; margin-top: 2rem;">
                 <button type="submit" class="btn btn-primary" style="flex: 1;">Update Event</button>
@@ -98,10 +120,18 @@ function openModal(id) {
 function closeModal(id) {
     document.getElementById(id).style.display = 'none';
 }
-function openEditModal(id, name, price) {
+function openEditModal(id, name, price, package_items) {
     document.getElementById('edit_name').value = name;
     document.getElementById('edit_price').value = price;
     document.getElementById('editForm').action = '/admin/event/edit/' + id;
+    
+    // Reset checkboxes
+    const checkboxes = document.querySelectorAll('.edit-item-checkbox');
+    const selectedIds = package_items.split(',');
+    checkboxes.forEach(cb => {
+        cb.checked = selectedIds.includes(cb.value);
+    });
+
     openModal('editModal');
 }
 </script>

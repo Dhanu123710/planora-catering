@@ -335,6 +335,13 @@ def create_booking():
     if int(data['guests']) < 10:
         return jsonify({'success': False, 'message': 'Minimum 10 guests required for ordering.'}), 400
         
+    food_category = data.get('food_category', 'Veg')
+    if food_category == 'Both':
+        veg = int(data.get('veg_guests', 0))
+        non_veg = int(data.get('non_veg_guests', 0))
+        if veg + non_veg != int(data['guests']):
+            return jsonify({'success': False, 'message': 'Total Veg and Non-Veg guest count must equal total number of guests.'}), 400
+            
     event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date()
     today = datetime.now().date()
     
@@ -348,6 +355,12 @@ def create_booking():
     if (event_date - today).days > 180:
         return jsonify({'success': False, 'message': 'Booking cannot be made more than 6 months in advance.'}), 400
     
+    category_note = f"[Food Category: {food_category}]"
+    if food_category == 'Both':
+        category_note = f"[Food Category: Both (Veg: {data.get('veg_guests')}, Non-Veg: {data.get('non_veg_guests')})]"
+    
+    combined_notes = f"{category_note} | {data.get('notes', '')}"
+
     new_booking = Booking(
         user_id=current_user.id,
         event_type_id=data['event_type_id'],
@@ -355,7 +368,7 @@ def create_booking():
         guests=data['guests'],
         total_price=data['total_price'],
         service_type=data['service_type'],
-        notes=data.get('notes', ''),
+        notes=combined_notes,
         contact_phone=data.get('contact_phone', ''),
         delivery_address=data.get('delivery_address', ''),
         event_date=event_date,
@@ -368,8 +381,16 @@ def create_booking():
     db.session.add(new_booking)
     db.session.flush() # Get ID
     
-    for item_id in data['items']:
-        bi = BookingItem(booking_id=new_booking.id, menu_item_id=item_id, quantity=data['guests'])
+    for item_data in data['items']:
+        # item_data could be an ID (legacy) or an object {id, quantity}
+        if isinstance(item_data, dict):
+            item_id = item_data['id']
+            qty = item_data.get('quantity', data['guests'])
+        else:
+            item_id = item_data
+            qty = data['guests']
+            
+        bi = BookingItem(booking_id=new_booking.id, menu_item_id=item_id, quantity=qty)
         db.session.add(bi)
         
     db.session.commit()
@@ -652,7 +673,8 @@ def delete_menu_item(item_id):
 def manage_events():
     if current_user.role != 'admin': return redirect(url_for('index'))
     events = EventType.query.all()
-    return render_template('admin/events.html', events=events)
+    menu_items = MenuItem.query.all()
+    return render_template('admin/events.html', events=events, menu_items=menu_items)
 
 @app.route('/admin/event/add', methods=['POST'])
 @login_required
@@ -660,8 +682,9 @@ def add_event_type():
     if current_user.role != 'admin': return jsonify({'success': False}), 403
     name = request.form.get('name')
     base_price = float(request.form.get('base_price', 0))
+    package_items = ",".join(request.form.getlist('package_items'))
     
-    new_event = EventType(name=name, base_price=base_price)
+    new_event = EventType(name=name, base_price=base_price, package_items=package_items)
     db.session.add(new_event)
     db.session.commit()
     flash('Event type added!', 'success')
@@ -674,6 +697,7 @@ def edit_event_type(event_id):
     event = EventType.query.get_or_404(event_id)
     event.name = request.form.get('name')
     event.base_price = float(request.form.get('base_price', 0))
+    event.package_items = ",".join(request.form.getlist('package_items'))
     db.session.commit()
     flash('Event type updated!', 'success')
     return redirect(url_for('manage_events'))
