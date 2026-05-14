@@ -29,6 +29,7 @@ class MenuItem(db.Model):
     name = db.Column(db.String(100), nullable=False)
     category = db.Column(db.String(50), nullable=False) # Starter, Main Course, Dessert, Drink
     price = db.Column(db.Float, nullable=False)
+    food_type = db.Column(db.String(20), default='veg') # veg, non-veg
     image_url = db.Column(db.String(200), default='default_food.jpg')
 
 class Package(db.Model):

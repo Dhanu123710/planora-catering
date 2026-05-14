@@ -35,14 +35,49 @@ function nextStep(step) {
         }
     }
     
-    // Logic for Step 3: Preload and render items
+    // Logic for Step 3: Initialize items if first time
     if (step === 3) {
+        if (!state.menu_initialized) {
+            initializeMenuState();
+            state.menu_initialized = true;
+        }
         renderCustomizeMenu();
     }
     
     document.querySelectorAll('.step-container').forEach(s => s.classList.remove('active'));
     document.getElementById(`step${step}`).classList.add('active');
     state.step = step;
+}
+
+function initializeMenuState() {
+    const eventSelect = document.getElementById('event_type');
+    const packageItemsStr = eventSelect.options[eventSelect.selectedIndex].dataset.packageItems || '';
+    const packageItemIds = packageItemsStr.split(',').filter(id => id);
+
+    state.selected_items = [];
+    const menuData = document.querySelectorAll('.menu-item-source');
+    
+    menuData.forEach(itemEl => {
+        const id = itemEl.dataset.id;
+        const isPackage = packageItemIds.includes(id);
+        const foodType = itemEl.dataset.foodType;
+
+        // Filter based on food category
+        if (state.food_category !== 'Both') {
+            const currentType = state.food_category === 'Veg' ? 'veg' : 'non-veg';
+            if (foodType !== currentType) return;
+        }
+
+        if (isPackage) {
+            state.selected_items.push({
+                id: id,
+                name: itemEl.dataset.name,
+                price: parseFloat(itemEl.dataset.price),
+                quantity: state.guests,
+                isPackage: true
+            });
+        }
+    });
 }
 
 function renderCustomizeMenu() {
@@ -57,10 +92,6 @@ function renderCustomizeMenu() {
     additionalList.innerHTML = '';
 
     const menuData = document.querySelectorAll('.menu-item-source');
-    
-    // Maintain state for custom items
-    const previousItems = [...state.selected_items];
-    state.selected_items = [];
 
     menuData.forEach(itemEl => {
         const id = itemEl.dataset.id;
@@ -69,28 +100,15 @@ function renderCustomizeMenu() {
         const foodType = itemEl.dataset.foodType;
         const isPackage = packageItemIds.includes(id);
 
-        // Filter based on food category selection from Step 1
+        // Filter based on food category
         if (state.food_category !== 'Both') {
             const currentType = state.food_category === 'Veg' ? 'veg' : 'non-veg';
             if (foodType !== currentType) return;
         }
 
-        // Determine if selected and what quantity
-        let isSelected = false;
-        let quantity = state.guests;
-        
-        const prev = previousItems.find(i => i.id === id);
-        
-        if (isPackage) {
-            // Package items are selected by default unless user explicitly unchecked them (qty became 0)
-            isSelected = prev ? prev.quantity > 0 : true;
-            quantity = prev ? prev.quantity : state.guests;
-            if (isSelected) state.selected_items.push({id, name, price, quantity, isPackage: true});
-        } else if (prev && prev.quantity > 0) {
-            isSelected = true;
-            quantity = prev.quantity;
-            state.selected_items.push({id, name, price, quantity, isPackage: false});
-        }
+        const selectedItem = state.selected_items.find(i => i.id === id);
+        const isSelected = !!selectedItem;
+        const quantity = selectedItem ? selectedItem.quantity : state.guests;
 
         const itemHtml = `
             <div class="menu-list-item ${isSelected ? 'selected' : ''}" data-id="${id}" style="border-left: 4px solid ${isSelected ? 'var(--primary)' : 'transparent'};">
@@ -125,8 +143,8 @@ function renderCustomizeMenu() {
 }
 
 function toggleItemSelection(id, checked) {
-    const item = state.selected_items.find(i => i.id === id);
     if (checked) {
+        const item = state.selected_items.find(i => i.id === id);
         if (!item) {
             const source = document.querySelector(`.menu-item-source[data-id="${id}"]`);
             const packageItemsStr = document.getElementById('event_type').options[document.getElementById('event_type').selectedIndex].dataset.packageItems || '';
@@ -149,7 +167,7 @@ function toggleItemSelection(id, checked) {
 function updateItemQty(id, delta) {
     const item = state.selected_items.find(i => i.id === id);
     if (item) {
-        item.quantity = Math.max(10, item.quantity + delta); // Keep at least 10 if selected
+        item.quantity = Math.max(10, item.quantity + delta);
     }
     renderCustomizeMenu();
 }
@@ -236,7 +254,10 @@ document.getElementById('eventDate').addEventListener('change', function(e) {
 });
 
 // --- Event & Guest Listeners ---
-document.getElementById('event_type').addEventListener('change', updateQuotation);
+document.getElementById('event_type').addEventListener('change', function() {
+    state.menu_initialized = false;
+    updateQuotation();
+});
 document.getElementById('guests').addEventListener('input', function(e) {
     state.guests = parseInt(e.target.value) || 0;
     
@@ -261,6 +282,7 @@ document.getElementById('guests').addEventListener('input', function(e) {
 
 document.getElementById('food_category').addEventListener('change', function(e) {
     state.food_category = e.target.value;
+    state.menu_initialized = false;
     const bothSection = document.getElementById('both_guests_section');
     if (state.food_category === 'Both') {
         bothSection.style.display = 'block';
